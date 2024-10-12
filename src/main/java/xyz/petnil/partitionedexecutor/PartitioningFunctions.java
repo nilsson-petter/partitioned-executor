@@ -15,15 +15,12 @@ package xyz.petnil.partitionedexecutor;
  *
  * <p><strong>Usage Example:</strong></p>
  * <pre>
- *     PartitioningFunction function = PartitioningFunctions.powerOfTwo();
- *     int partition = function.getPartition(key, 16); // Example with 16 partitions
+ *     PartitioningFunction function = PartitioningFunctions.powerOfTwo(16);
+ *     int partition = function.getPartition(key); // Example with 16 partitions
  * </pre>
  */
 public class PartitioningFunctions {
 
-    /**
-     * Private constructor to prevent instantiation of this utility class.
-     */
     private PartitioningFunctions() {
     }
 
@@ -35,8 +32,8 @@ public class PartitioningFunctions {
      * @return a {@link PartitioningFunction} for power-of-two partitioning
      * @see PartitioningFunction
      */
-    public static PartitioningFunction powerOfTwo() {
-        return new PowerOfTwoPartitioningFunction(); // Assuming this is optimized like HashMap
+    public static PartitioningFunction powerOfTwo(int maxPartitions) {
+        return new PowerOfTwoPartitioningFunction(maxPartitions);
     }
 
     /**
@@ -47,7 +44,7 @@ public class PartitioningFunctions {
      * @return a general-purpose {@link PartitioningFunction} for partitioning
      * @see PartitioningFunction
      */
-    public static PartitioningFunction generalPurpose() {
-        return new GeneralPurposePartitioningFunction();
+    public static PartitioningFunction generalPurpose(int maxPartitions) {
+        return new GeneralPurposePartitioningFunction(maxPartitions);
     }
 }

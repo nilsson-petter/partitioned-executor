@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.util.Queue;
 
 public interface PartitionQueue {
-    boolean enqueue(PartitionedRunnable partitionedRunnable);
+    boolean enqueue(PartitionedRunnable task);
 
     PartitionedRunnable getNextTask(Duration timeout) throws InterruptedException;
 
@@ -15,6 +15,6 @@ public interface PartitionQueue {
     Queue<PartitionedRunnable> getQueue();
 
     interface OnDroppedCallback {
-        void onDropped(PartitionedRunnable partitionedRunnable);
+        void onDropped(PartitionedRunnable task);
     }
 }

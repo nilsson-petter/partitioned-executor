@@ -10,40 +10,50 @@ public interface Partition extends AutoCloseable {
 
     PartitionQueue getPartitionQueue();
 
-    void submitForExecution(PartitionedRunnable partitionedRunnable);
+    void submitForExecution(PartitionedRunnable task);
 
-    void shutdown();
+    void initiateShutdown();
 
-    boolean awaitTermination(Duration duration) throws InterruptedException;
+    boolean awaitTaskCompletion(Duration duration) throws InterruptedException;
 
-    Queue<PartitionedRunnable> terminateForcibly();
+    Queue<PartitionedRunnable> forceShutdownAndGetPending();
+
+    void setCallback(Callback callback);
 
     @Override
     default void close() throws Exception {
-        shutdown();
-        if (!awaitTermination(Duration.ofSeconds(30))) {
-            terminateForcibly();
+        initiateShutdown();
+        if (!awaitTaskCompletion(Duration.ofMinutes(30))) {
+            forceShutdownAndGetPending();
         }
     }
 
     interface Callback {
-        default void onSuccess(PartitionedRunnable partitionedRunnable) {
+        default void onSuccess(int partition, PartitionedRunnable task) {
 
         }
 
-        default void onError(PartitionedRunnable partitionedRunnable) {
+        default void onError(int partition, PartitionedRunnable task, Exception exception) {
 
         }
 
-        default void onDropped(PartitionedRunnable partitionedRunnable) {
+        default void onInterrupted(int partition) {
 
         }
 
-        default void onSubmitted(PartitionedRunnable partitionedRunnable) {
+        default void onRejected(int partition, PartitionedRunnable task) {
 
         }
 
-        default void onTerminated() {
+        default void onDropped(int partition, PartitionedRunnable task) {
+
+        }
+
+        default void onSubmitted(int partition, PartitionedRunnable task) {
+
+        }
+
+        default void onTerminated(int partition) {
 
         }
     }

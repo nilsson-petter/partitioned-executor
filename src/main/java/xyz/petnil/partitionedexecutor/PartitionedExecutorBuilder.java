@@ -2,11 +2,13 @@ package xyz.petnil.partitionedexecutor;
 
 public class PartitionedExecutorBuilder {
     private final int maxPartitions;
-    private PartitioningFunction partitioningFunction = PartitioningFunctions.powerOfTwo(); // Default
+    private PartitioningFunction partitioningFunction;
     private PartitionCreator partitionCreator;
 
     private PartitionedExecutorBuilder(int maxPartitions) {
         this.maxPartitions = maxPartitions;
+        partitioningFunction = PartitioningFunctions.generalPurpose(maxPartitions);
+        this.partitionCreator = new PartitionCreatorBuilder(this).createPartitionCreator();
     }
 
     public static PartitionedExecutorBuilder newBuilder(int maxPartitions) {
@@ -14,7 +16,7 @@ public class PartitionedExecutorBuilder {
     }
 
     public PartitionedExecutorBuilder withPartitioningFunction(PartitioningFunction partitioningFunction) {
-        this.partitioningFunction = partitioningFunction;
+        this.partitioningFunction =  partitioningFunction;
         return this;
     }
 
@@ -28,16 +30,18 @@ public class PartitionedExecutorBuilder {
     }
 
     public PartitionedExecutor build() {
-        if (partitionCreator == null) {
-            throw new IllegalStateException("PartitionCreator must be configured.");
+        if (maxPartitions != partitioningFunction.getMaxNumberOfPartitions()) {
+            throw new IllegalStateException("maxPartitions and partitioningFunction.getMaxNumberOfPartitions does not align");
         }
-        return new LazyPartitionedExecutor(maxPartitions, partitioningFunction, partitionCreator);
+        return new LazyPartitionedExecutor(partitioningFunction, partitionCreator);
     }
 
     public static class PartitionCreatorBuilder {
         private PartitionQueue partitionQueue = PartitionQueues.unbounded();
-        private PartitionThreadFactoryCreator threadFactory = PartitionThreadFactoryCreators.virtualThread("SingleThreadedPartitionWorker");
+        private PartitionThreadFactoryCreator threadFactory;
         private final PartitionedExecutorBuilder parentBuilder;
+        private String threadNamePrefix = "SingleThreadedPartitionWorker";
+
 
         private PartitionCreatorBuilder(PartitionedExecutorBuilder parentBuilder) {
             this.parentBuilder = parentBuilder;
@@ -48,6 +52,11 @@ public class PartitionedExecutorBuilder {
             return this;
         }
 
+        public PartitionCreatorBuilder withThreadNamePrefix(String threadNamePrefix) {
+            this.threadNamePrefix = threadNamePrefix;
+            return this;
+        }
+
         public PartitionCreatorBuilder withThreadFactory(PartitionThreadFactoryCreator threadFactory) {
             this.threadFactory = threadFactory;
             return this;
@@ -55,8 +64,15 @@ public class PartitionedExecutorBuilder {
 
         // Finalize PartitionCreator and return control to the main builder
         public PartitionedExecutorBuilder buildPartitionCreator() {
-            parentBuilder.partitionCreator = i -> new SingleThreadedPartitionWorker(i, partitionQueue, threadFactory.createThreadFactory(i));
+            parentBuilder.partitionCreator = createPartitionCreator();
             return parentBuilder;
+        }
+
+        private PartitionCreator createPartitionCreator() {
+            if (threadFactory == null) {
+                threadFactory = PartitionThreadFactoryCreators.virtualThread(threadNamePrefix);
+            }
+            return i -> new SingleThreadedPartitionWorker(i, partitionQueue, threadFactory.createThreadFactory(i));
         }
     }
 }

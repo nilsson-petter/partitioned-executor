@@ -6,9 +6,7 @@ import java.util.Map;
 import java.util.Queue;
 
 public interface PartitionedExecutor extends AutoCloseable {
-    void execute(Runnable task, Object partitionKey);
-
-    void execute(PartitionedRunnable partitionedRunnable);
+    void execute(PartitionedRunnable task);
 
     void shutdown();
 

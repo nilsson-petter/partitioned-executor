@@ -9,7 +9,7 @@ public class PartitionedExecutors {
     }
 
     public static PartitionedExecutor unbounded(int maxPartitions, String name) {
-        return unbounded(maxPartitions, name, PartitioningFunctions.generalPurpose());
+        return unbounded(maxPartitions, name, PartitioningFunctions.generalPurpose(maxPartitions));
     }
 
     public static PartitionedExecutor unbounded(int maxPartitions, String name, PartitioningFunction partitioningFunction) {

@@ -1,13 +1,21 @@
 package xyz.petnil.partitionedexecutor;
 
 public class GeneralPurposePartitioningFunction implements PartitioningFunction {
-    @Override
-    public int getPartition(Object partitionKey, int maxPartitions) {
-        if (partitionKey == null) {
-            throw new NullPointerException("partitionKey must not be null");
-        }
+
+    private final int maxPartitions;
+
+    public GeneralPurposePartitioningFunction(int maxPartitions) {
         if (maxPartitions < 1) {
             throw new IllegalArgumentException("maxPartitions must be greater than 0");
+        }
+
+        this.maxPartitions = maxPartitions;
+    }
+
+    @Override
+    public int getPartition(Object partitionKey) {
+        if (partitionKey == null) {
+            throw new NullPointerException("partitionKey must not be null");
         }
 
         int hash = partitionKey.hashCode();
@@ -16,6 +24,11 @@ public class GeneralPurposePartitioningFunction implements PartitioningFunction 
         }
 
         return Math.abs(hash) % maxPartitions;
+    }
+
+    @Override
+    public int getMaxNumberOfPartitions() {
+        return maxPartitions;
     }
 }
 

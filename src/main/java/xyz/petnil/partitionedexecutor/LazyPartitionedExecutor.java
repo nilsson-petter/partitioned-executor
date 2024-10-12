@@ -12,19 +12,15 @@ import java.util.concurrent.locks.ReentrantLock;
 
 class LazyPartitionedExecutor implements PartitionedExecutor {
     private final Lock mainLock = new ReentrantLock();
-
-    private final int maxPartitions;
     private final Map<Integer, Partition> partitions;
 
     private final PartitionCreator partitionCreator;
     private final PartitioningFunction partitioningFunction;
 
-    public LazyPartitionedExecutor(int maxPartitions,
-                                   PartitioningFunction partitioningFunction,
+    public LazyPartitionedExecutor(PartitioningFunction partitioningFunction,
                                    PartitionCreator partitionCreator
     ) {
-        this.maxPartitions = maxPartitions;
-        this.partitions = new ConcurrentHashMap<>(maxPartitions);
+        this.partitions = new ConcurrentHashMap<>();
         this.partitioningFunction = partitioningFunction;
         this.partitionCreator = partitionCreator;
     }
@@ -47,7 +43,7 @@ class LazyPartitionedExecutor implements PartitionedExecutor {
     public void execute(PartitionedRunnable partitionedRunnable) {
         mainLock.lock();
         try {
-            int partitionNumber = partitioningFunction.getPartition(partitionedRunnable.getPartitionKey(), maxPartitions);
+            int partitionNumber = partitioningFunction.getPartition(partitionedRunnable.getPartitionKey());
             Partition partition = partitions.computeIfAbsent(partitionNumber, partitionCreator::create);
             partition.startPartition();
             partition.submitForExecution(partitionedRunnable);
@@ -60,7 +56,7 @@ class LazyPartitionedExecutor implements PartitionedExecutor {
     public void shutdown() {
         mainLock.lock();
         try {
-            partitions.values().forEach(Partition::shutdown);
+            partitions.values().forEach(Partition::initiateShutdown);
         } finally {
             mainLock.unlock();
         }
@@ -72,7 +68,7 @@ class LazyPartitionedExecutor implements PartitionedExecutor {
             return partitions.values().stream()
                     .allMatch(p -> {
                         try {
-                            return p.awaitTermination(duration);
+                            return p.awaitTaskCompletion(duration);
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                             return false;
@@ -93,7 +89,7 @@ class LazyPartitionedExecutor implements PartitionedExecutor {
         mainLock.lock();
         try {
             HashMap<Integer, Queue<PartitionedRunnable>> tasksPerPartition = new HashMap<>();
-            partitions.values().forEach(p -> tasksPerPartition.put(p.getPartitionNumber(), p.terminateForcibly()));
+            partitions.values().forEach(p -> tasksPerPartition.put(p.getPartitionNumber(), p.forceShutdownAndGetPending()));
             return tasksPerPartition;
         } finally {
             mainLock.lock();
@@ -107,6 +103,6 @@ class LazyPartitionedExecutor implements PartitionedExecutor {
 
     @Override
     public int getMaxPartitionsCount() {
-        return maxPartitions;
+        return partitioningFunction.getMaxNumberOfPartitions();
     }
 }
