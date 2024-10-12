@@ -61,7 +61,7 @@ class LazyPartitionedExecutor implements PartitionedExecutor {
                         }
                     });
         } finally {
-            mainLock.lock();
+            mainLock.unlock();
         }
     }
 
@@ -78,7 +78,7 @@ class LazyPartitionedExecutor implements PartitionedExecutor {
             partitions.values().forEach(p -> tasksPerPartition.put(p.getPartitionNumber(), p.forceShutdownAndGetPending()));
             return tasksPerPartition;
         } finally {
-            mainLock.lock();
+            mainLock.unlock();
         }
     }
 
