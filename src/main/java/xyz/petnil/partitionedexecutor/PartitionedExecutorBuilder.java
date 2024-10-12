@@ -33,7 +33,7 @@ public class PartitionedExecutorBuilder {
         if (maxPartitions != partitioningFunction.getMaxNumberOfPartitions()) {
             throw new IllegalStateException("maxPartitions and partitioningFunction.getMaxNumberOfPartitions does not align");
         }
-        return new LazyPartitionedExecutor(partitioningFunction, partitionCreator);
+        return new LazyLoadingPartitionedExecutor(partitioningFunction, partitionCreator);
     }
 
     public static class PartitionCreatorBuilder {

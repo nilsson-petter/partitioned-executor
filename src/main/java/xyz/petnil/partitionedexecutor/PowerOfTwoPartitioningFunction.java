@@ -1,6 +1,6 @@
 package xyz.petnil.partitionedexecutor;
 
-public class PowerOfTwoPartitioningFunction implements PartitioningFunction {
+class PowerOfTwoPartitioningFunction implements PartitioningFunction {
 
     private final int maxPartitions;
 

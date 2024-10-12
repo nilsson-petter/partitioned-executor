@@ -1,6 +1,6 @@
 package xyz.petnil.partitionedexecutor;
 
-public class GeneralPurposePartitioningFunction implements PartitioningFunction {
+class GeneralPurposePartitioningFunction implements PartitioningFunction {
 
     private final int maxPartitions;
 

@@ -8,6 +8,7 @@ import java.time.Duration;
  * in systems where sampling rates are customized based on specific
  * partitioned data or keys.
  */
+@FunctionalInterface
 public interface SamplingFunction {
 
     /**
