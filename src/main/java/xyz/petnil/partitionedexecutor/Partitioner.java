@@ -1,10 +1,10 @@
 package xyz.petnil.partitionedexecutor;
 
 /**
- * The PartitioningFunction interface defines a method to compute
+ * The Partitioner interface defines a method to compute
  * the partition index for a given partition key.
  */
-public interface PartitioningFunction {
+public interface Partitioner {
     /**
      * Returns the partition index for the given partition key.
      * <p>

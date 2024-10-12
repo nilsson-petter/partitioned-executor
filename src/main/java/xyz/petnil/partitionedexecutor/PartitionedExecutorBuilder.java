@@ -2,12 +2,12 @@ package xyz.petnil.partitionedexecutor;
 
 public class PartitionedExecutorBuilder {
     private final int maxPartitions;
-    private PartitioningFunction partitioningFunction;
+    private Partitioner partitioner;
     private PartitionCreator partitionCreator;
 
     private PartitionedExecutorBuilder(int maxPartitions) {
         this.maxPartitions = maxPartitions;
-        partitioningFunction = PartitioningFunctions.generalPurpose(maxPartitions);
+        partitioner = Partitioners.generalPurpose(maxPartitions);
         this.partitionCreator = new PartitionCreatorBuilder(this).createPartitionCreator();
     }
 
@@ -15,8 +15,8 @@ public class PartitionedExecutorBuilder {
         return new PartitionedExecutorBuilder(maxPartitions);
     }
 
-    public PartitionedExecutorBuilder withPartitioningFunction(PartitioningFunction partitioningFunction) {
-        this.partitioningFunction =  partitioningFunction;
+    public PartitionedExecutorBuilder withPartitioner(Partitioner partitioner) {
+        this.partitioner =  partitioner;
         return this;
     }
 
@@ -30,10 +30,10 @@ public class PartitionedExecutorBuilder {
     }
 
     public PartitionedExecutor build() {
-        if (maxPartitions != partitioningFunction.getMaxNumberOfPartitions()) {
-            throw new IllegalStateException("maxPartitions and partitioningFunction.getMaxNumberOfPartitions does not align");
+        if (maxPartitions != partitioner.getMaxNumberOfPartitions()) {
+            throw new IllegalStateException("maxPartitions and partitioner.getMaxNumberOfPartitions does not align");
         }
-        return new LazyLoadingPartitionedExecutor(partitioningFunction, partitionCreator);
+        return new LazyLoadingPartitionedExecutor(partitioner, partitionCreator);
     }
 
     public static class PartitionCreatorBuilder {

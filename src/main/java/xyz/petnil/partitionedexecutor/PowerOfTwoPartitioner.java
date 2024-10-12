@@ -1,14 +1,18 @@
 package xyz.petnil.partitionedexecutor;
 
-class GeneralPurposePartitioningFunction implements PartitioningFunction {
+class PowerOfTwoPartitioner implements Partitioner {
 
     private final int maxPartitions;
 
-    public GeneralPurposePartitioningFunction(int maxPartitions) {
+    public PowerOfTwoPartitioner(int maxPartitions) {
         if (maxPartitions < 1) {
             throw new IllegalArgumentException("maxPartitions must be greater than 0");
         }
 
+        // Check if maxPartitions is a power of two
+        if ((maxPartitions & (maxPartitions - 1)) != 0) {
+            throw new IllegalArgumentException("maxPartitions must be a power of two");
+        }
         this.maxPartitions = maxPartitions;
     }
 
@@ -18,12 +22,7 @@ class GeneralPurposePartitioningFunction implements PartitioningFunction {
             throw new NullPointerException("partitionKey must not be null");
         }
 
-        int hash = partitionKey.hashCode();
-        if (hash == Integer.MIN_VALUE) {
-            hash = 0;  // Handle the special case for Integer.MIN_VALUE
-        }
-
-        return Math.abs(hash) % maxPartitions;
+        return partitionKey.hashCode() & (maxPartitions - 1);
     }
 
     @Override
@@ -31,4 +30,3 @@ class GeneralPurposePartitioningFunction implements PartitioningFunction {
         return maxPartitions;
     }
 }
-

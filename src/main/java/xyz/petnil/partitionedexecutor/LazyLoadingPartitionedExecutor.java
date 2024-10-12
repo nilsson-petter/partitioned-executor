@@ -16,7 +16,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * on-demand when a task is assigned to a new partition. This ensures that resources
  * are only allocated when necessary.
  *
- * <p>This executor uses a {@link PartitioningFunction} to determine the partition for
+ * <p>This executor uses a {@link Partitioner} to determine the partition for
  * each task, and a {@link PartitionCreator} to instantiate partitions when required.
  *
  * <p>It supports graceful shutdown with {@link #shutdown()} and forced shutdown
@@ -30,20 +30,20 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
     private final Lock mainLock = new ReentrantLock();
     private final Map<Integer, Partition> partitions;
     private final PartitionCreator partitionCreator;
-    private final PartitioningFunction partitioningFunction;
+    private final Partitioner partitioner;
 
     /**
-     * Creates a {@code LazyPartitionedExecutor} with the specified partitioning function
+     * Creates a {@code LazyPartitionedExecutor} with the specified partitioner
      * and partition creator.
      *
-     * @param partitioningFunction the function used to assign tasks to partitions, must not be null
+     * @param partitioner the function used to assign tasks to partitions, must not be null
      * @param partitionCreator the factory used to create partitions when needed, must not be null
-     * @throws NullPointerException if either {@code partitioningFunction} or {@code partitionCreator} is null
+     * @throws NullPointerException if either {@code partitioner} or {@code partitionCreator} is null
      */
-    public LazyLoadingPartitionedExecutor(PartitioningFunction partitioningFunction,
+    public LazyLoadingPartitionedExecutor(Partitioner partitioner,
                                           PartitionCreator partitionCreator) {
         this.partitions = new ConcurrentHashMap<>();
-        this.partitioningFunction = Objects.requireNonNull(partitioningFunction);
+        this.partitioner = Objects.requireNonNull(partitioner);
         this.partitionCreator = Objects.requireNonNull(partitionCreator);
     }
 
@@ -60,7 +60,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
         Objects.requireNonNull(task);
         mainLock.lock();
         try {
-            int partitionNumber = partitioningFunction.getPartition(task.getPartitionKey());
+            int partitionNumber = partitioner.getPartition(task.getPartitionKey());
             Partition partition = partitions.computeIfAbsent(partitionNumber, partitionCreator::create);
             partition.startPartition();
             partition.submitForExecution(task);
@@ -70,13 +70,13 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
     }
 
     /**
-     * Returns the {@link PartitioningFunction} used by this executor to route tasks to partitions.
+     * Returns the {@link Partitioner} used by this executor to route tasks to partitions.
      *
-     * @return the partitioning function
+     * @return the partitioner
      */
     @Override
-    public PartitioningFunction getPartitioningFunction() {
-        return partitioningFunction;
+    public Partitioner getPartitioner() {
+        return partitioner;
     }
 
     /**
@@ -159,13 +159,13 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
 
     /**
      * Returns the maximum number of partitions supported by the executor,
-     * as defined by the {@link PartitioningFunction}.
+     * as defined by the {@link Partitioner}.
      *
      * @return the maximum number of partitions
      */
     @Override
     public int getMaxPartitionsCount() {
-        return partitioningFunction.getMaxNumberOfPartitions();
+        return partitioner.getMaxNumberOfPartitions();
     }
 }
 

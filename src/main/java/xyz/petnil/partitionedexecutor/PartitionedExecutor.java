@@ -10,13 +10,13 @@ import java.util.Queue;
  * while routing each task to a designated partition based on its partition key.
  *
  * <p>Each partition can handle tasks synchronously, but tasks across different partitions
- * can execute in parallel. The routing logic is determined by the {@link PartitioningFunction}.
+ * can execute in parallel. The routing logic is determined by the {@link Partitioner}.
  */
 public interface PartitionedExecutor extends AutoCloseable {
 
     /**
      * Executes the given partitioned task. The task will be routed to a partition based
-     * on its partition key, as determined by the {@link PartitioningFunction}.
+     * on its partition key, as determined by the {@link Partitioner}.
      *
      * @param task the task to execute, must not be null
      * @throws NullPointerException if the task is null
@@ -24,11 +24,11 @@ public interface PartitionedExecutor extends AutoCloseable {
     void execute(PartitionedRunnable task);
 
     /**
-     * Returns the partitioning function that is used to map partition keys to partition indices.
+     * Returns the {@link Partitioner} used by this executor to route tasks to partitions.
      *
-     * @return the partitioning function
+     * @return the partitioner
      */
-    PartitioningFunction getPartitioningFunction();
+    Partitioner getPartitioner();
 
     /**
      * Initiates an orderly shutdown of the executor, where previously submitted tasks are executed,
