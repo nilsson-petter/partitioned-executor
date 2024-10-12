@@ -11,6 +11,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -21,6 +22,8 @@ class SampledPartitionQueue implements PartitionQueue {
     private final Map<Object, PartitionedRunnable> taskPerPartitionKeyMap;
     private final SamplingFunction samplingFunction;
 
+    private final AtomicReference<OnDroppedCallback> onDroppedCallback = new AtomicReference<>();
+
     public SampledPartitionQueue(SamplingFunction samplingFunction) {
         this.samplingFunction = samplingFunction;
         this.partitionKeyQueue = new DelayQueue<>();
@@ -29,11 +32,14 @@ class SampledPartitionQueue implements PartitionQueue {
 
     @Override
     public boolean enqueue(PartitionedRunnable partitionedRunnable) {
-        mainLock.lock();
         try {
             Object partitionKey = partitionedRunnable.getPartitionKey();
-            if (taskPerPartitionKeyMap.put(partitionKey, partitionedRunnable) == null) {
+            mainLock.lock();
+            PartitionedRunnable previousTask = taskPerPartitionKeyMap.put(partitionKey, partitionedRunnable);
+            if (previousTask == null) {
                 return partitionKeyQueue.add(new DelayedObject(partitionKey, samplingFunction.getSamplingTime(partitionKey).toMillis()));
+            } else {
+                onDropped(previousTask);
             }
             return true;
         } finally {
@@ -43,9 +49,9 @@ class SampledPartitionQueue implements PartitionQueue {
 
     @Override
     public PartitionedRunnable getNextTask(Duration duration) throws InterruptedException {
-        mainLock.lock();
         try {
             DelayedObject delayedPartitionKey = partitionKeyQueue.poll(duration.toMillis(), TimeUnit.MILLISECONDS);
+            mainLock.lock();
             if (delayedPartitionKey != null) {
                 return taskPerPartitionKeyMap.remove(delayedPartitionKey.getObject());
             }
@@ -56,13 +62,15 @@ class SampledPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public void registerOnDroppedCallback(OnDroppedCallback callback) {
-        // Not implemented
+    public void setOnDroppedCallback(OnDroppedCallback callback) {
+        onDroppedCallback.set(callback);
     }
 
-    @Override
-    public void clearOnDroppedCallback() {
-        // Not implemented
+    private void onDropped(PartitionedRunnable task) {
+        OnDroppedCallback od = onDroppedCallback.get();
+        if (od != null) {
+            od.onDropped(task);
+        }
     }
 
     @Override

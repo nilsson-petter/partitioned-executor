@@ -25,12 +25,7 @@ class UnboundedPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public void registerOnDroppedCallback(OnDroppedCallback callback) {
-        // Not implemented
-    }
-
-    @Override
-    public void clearOnDroppedCallback() {
+    public void setOnDroppedCallback(OnDroppedCallback callback) {
         // Not implemented
     }
 

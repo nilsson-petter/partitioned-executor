@@ -8,9 +8,7 @@ public interface PartitionQueue {
 
     PartitionedRunnable getNextTask(Duration timeout) throws InterruptedException;
 
-    void registerOnDroppedCallback(OnDroppedCallback callback);
-
-    void clearOnDroppedCallback();
+    void setOnDroppedCallback(OnDroppedCallback callback);
 
     Queue<PartitionedRunnable> getQueue();
 
