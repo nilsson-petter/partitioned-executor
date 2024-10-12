@@ -100,7 +100,7 @@ if (!executor.awaitTermination(Duration.ofSeconds(30))) {
 
 By default, the library provides two partitioning strategies:
 
-1. **General-Purpose Hashing**:
+1. **General-Purpose Partitioning**:
     - This is a simple, general-purpose partitioning function that computes the partition number by using the modulus operator.
     - Usage: `Partitioners.generalPurpose(10)`
 
@@ -146,7 +146,6 @@ Three implementations of `PartitionQueue` are provided. Users are free to implem
 ### More Examples
 ```java
 class DocumentService implements Partition.Callback {
-    private static final Logger log = LoggerFactory.getLogger(DocumentService.class);
     private final PartitionedExecutor executor;
     public DocumentService() {
         executor = PartitionedExecutorBuilder.newBuilder(8)
@@ -162,14 +161,14 @@ class DocumentService implements Partition.Callback {
     @Override
     public void onSuccess(int partition, PartitionedRunnable task) {
         if (task instanceof PersistDocumentTask pdt) {
-            log.info("Persisted document={} on partition={}", pdt.document(), partition);
+            // Handle success
         }
     }
 
     @Override
     public void onError(int partition, PartitionedRunnable task, Exception exception) {
         if (task instanceof PersistDocumentTask pdt) {
-            log.error("Failed to persist document={} on partition={}", pdt.document(), partition, exception);
+           // Handle error
         }
     }
 }
