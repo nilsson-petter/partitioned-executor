@@ -86,4 +86,6 @@ public interface PartitionedExecutor extends AutoCloseable {
             shutdownNow();
         }
     }
+
+    // TODO: Add callback on this level also?
 }

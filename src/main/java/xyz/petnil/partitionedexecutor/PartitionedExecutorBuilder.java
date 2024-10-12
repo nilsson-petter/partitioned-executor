@@ -2,12 +2,12 @@ package xyz.petnil.partitionedexecutor;
 
 public class PartitionedExecutorBuilder {
     private final int maxPartitions;
-    private Partitioner partitioner;
+    private PartitionerCreator partitioner;
     private PartitionCreator partitionCreator;
 
     private PartitionedExecutorBuilder(int maxPartitions) {
         this.maxPartitions = maxPartitions;
-        partitioner = Partitioners.generalPurpose(maxPartitions);
+        this.partitioner = Partitioners::generalPurpose;
         this.partitionCreator = new PartitionCreatorBuilder(this).createPartitionCreator();
     }
 
@@ -15,8 +15,8 @@ public class PartitionedExecutorBuilder {
         return new PartitionedExecutorBuilder(maxPartitions);
     }
 
-    public PartitionedExecutorBuilder withPartitioner(Partitioner partitioner) {
-        this.partitioner =  partitioner;
+    public PartitionedExecutorBuilder withPartitioner(PartitionerCreator partitioner) {
+        this.partitioner = partitioner;
         return this;
     }
 
@@ -30,30 +30,33 @@ public class PartitionedExecutorBuilder {
     }
 
     public PartitionedExecutor build() {
-        if (maxPartitions != partitioner.getMaxNumberOfPartitions()) {
-            throw new IllegalStateException("maxPartitions and partitioner.getMaxNumberOfPartitions does not align");
-        }
-        return new LazyLoadingPartitionedExecutor(partitioner, partitionCreator);
+        return new LazyLoadingPartitionedExecutor(partitioner.createPartitioner(maxPartitions), partitionCreator);
     }
 
     public static class PartitionCreatorBuilder {
-        private PartitionQueue partitionQueue = PartitionQueues.unbounded();
-        private PartitionThreadFactoryCreator threadFactory;
         private final PartitionedExecutorBuilder parentBuilder;
+        private PartitionThreadFactoryCreator threadFactory;
         private String threadNamePrefix = "SingleThreadedPartitionWorker";
+        private PartitionQueueCreator partitionQueueCreator = PartitionQueues::unbounded;
+        private Partition.Callback callback;
 
 
         private PartitionCreatorBuilder(PartitionedExecutorBuilder parentBuilder) {
             this.parentBuilder = parentBuilder;
         }
 
-        public PartitionCreatorBuilder withPartitionQueue(PartitionQueue partitionQueue) {
-            this.partitionQueue = partitionQueue;
+        public PartitionCreatorBuilder withPartitionQueueCreator(PartitionQueueCreator partitionQueueCreator) {
+            this.partitionQueueCreator = partitionQueueCreator;
             return this;
         }
 
         public PartitionCreatorBuilder withThreadNamePrefix(String threadNamePrefix) {
             this.threadNamePrefix = threadNamePrefix;
+            return this;
+        }
+
+        public PartitionCreatorBuilder withCallback(Partition.Callback callback) {
+            this.callback = callback;
             return this;
         }
 
@@ -72,7 +75,8 @@ public class PartitionedExecutorBuilder {
             if (threadFactory == null) {
                 threadFactory = PartitionThreadFactoryCreators.virtualThread(threadNamePrefix);
             }
-            return i -> new SingleThreadedPartitionWorker(i, partitionQueue, threadFactory.createThreadFactory(i));
+
+            return i -> new SingleThreadedPartitionWorker(i, partitionQueueCreator.create(), threadFactory.createThreadFactory(i), callback);
         }
     }
 }

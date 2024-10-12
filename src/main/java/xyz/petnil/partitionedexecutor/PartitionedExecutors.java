@@ -1,26 +1,41 @@
 package xyz.petnil.partitionedexecutor;
 
+import java.time.Duration;
+
 public class PartitionedExecutors {
     private PartitionedExecutors() {
     }
 
     public static PartitionedExecutor unbounded(int maxPartitions) {
-        return unbounded(maxPartitions, "PartitionedExecutor");
-    }
-
-    public static PartitionedExecutor unbounded(int maxPartitions, String name) {
-        return unbounded(maxPartitions, name, Partitioners.generalPurpose(maxPartitions));
-    }
-
-    public static PartitionedExecutor unbounded(int maxPartitions, String name, Partitioner partitioner) {
-        return PartitionedExecutorBuilder
-                .newBuilder(maxPartitions)
-                .withPartitioner(partitioner)
+        return PartitionedExecutorBuilder.newBuilder(maxPartitions)
+                .withPartitioner(getPartitioner(maxPartitions))
                 .configurePartitionCreator()
-                .withPartitionQueue(PartitionQueues.unbounded())
-                .withThreadFactory(PartitionThreadFactoryCreators.virtualThread(name))
+                .withPartitionQueueCreator(PartitionQueues::unbounded)
                 .buildPartitionCreator()
                 .build();
     }
+
+    public static PartitionedExecutor bounded(int maxPartitions, int maxQueueSize) {
+        return PartitionedExecutorBuilder.newBuilder(maxPartitions)
+                .withPartitioner(getPartitioner(maxPartitions))
+                .configurePartitionCreator()
+                .withPartitionQueueCreator(() -> PartitionQueues.bounded(maxQueueSize))
+                .buildPartitionCreator()
+                .build();
+    }
+
+    public static PartitionedExecutor sampled(int maxPartitions, Duration sampleTime) {
+        return PartitionedExecutorBuilder.newBuilder(maxPartitions)
+                .withPartitioner(getPartitioner(maxPartitions))
+                .configurePartitionCreator()
+                .withPartitionQueueCreator(() -> PartitionQueues.sampled(o -> sampleTime))
+                .buildPartitionCreator()
+                .build();
+    }
+
+    private static PartitionerCreator getPartitioner(int maxPartitions) {
+        return PowerOfTwo.isPowerOfTwo(maxPartitions) ? Partitioners::powerOfTwo : Partitioners::generalPurpose;
+    }
+
 
 }

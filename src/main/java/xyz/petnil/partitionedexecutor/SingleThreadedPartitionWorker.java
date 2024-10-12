@@ -1,6 +1,7 @@
 package xyz.petnil.partitionedexecutor;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,17 +26,10 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDropp
             Callback callback
     ) {
         this.partitionNumber = partitionNumber;
-        this.partitionQueue = partitionQueue;
-        this.threadFactory = threadFactory;
+        this.partitionQueue = Objects.requireNonNull(partitionQueue);
+        this.partitionQueue.setOnDroppedCallback(this);
+        this.threadFactory = Objects.requireNonNull(threadFactory);
         this.callback = new AtomicReference<>(callback);
-    }
-
-    public SingleThreadedPartitionWorker(
-            int partitionNumber,
-            PartitionQueue partitionQueue,
-            ThreadFactory threadFactory
-    ) {
-        this(partitionNumber, partitionQueue, threadFactory, null);
     }
 
     @Override

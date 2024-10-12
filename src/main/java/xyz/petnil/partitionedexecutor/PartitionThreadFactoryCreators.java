@@ -5,6 +5,6 @@ public class PartitionThreadFactoryCreators {
     }
 
     public static PartitionThreadFactoryCreator virtualThread(String name) {
-        return new VirtualThreadPartitionThreadFactoryCreator(name);
+        return i -> Thread.ofVirtual().name(name + "-" + i).factory();
     }
 }

@@ -10,7 +10,7 @@ class PowerOfTwoPartitioner implements Partitioner {
         }
 
         // Check if maxPartitions is a power of two
-        if ((maxPartitions & (maxPartitions - 1)) != 0) {
+        if (!PowerOfTwo.isPowerOfTwo(maxPartitions)) {
             throw new IllegalArgumentException("maxPartitions must be a power of two");
         }
         this.maxPartitions = maxPartitions;

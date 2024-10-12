@@ -16,11 +16,14 @@ import java.util.Queue;
  * gracefully. If a partition is unable to complete within a specified timeout during shutdown,
  * any remaining tasks can be forcibly retrieved.
  *
+ * <p>This interface extends {@link PartitionQueue.OnDroppedCallback} to ensure callbacks get propagated
+ * to {@link Callback}.
+ *
  * @see PartitionQueue
  * @see PartitionedRunnable
  * @see PartitionedExecutor
  */
-public interface Partition extends AutoCloseable {
+public interface Partition extends AutoCloseable, PartitionQueue.OnDroppedCallback {
 
     /**
      * Returns the unique number assigned to this partition.
