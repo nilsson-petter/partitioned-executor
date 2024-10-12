@@ -43,7 +43,7 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDropp
         mainLock.lock();
         try {
             if (thread == null || !thread.isAlive()) {
-                thread = threadFactory.newThread(this::pollAndProcessOnce);
+                thread = threadFactory.newThread(this::pollAndProcess);
                 thread.start();
             }
         } finally {
@@ -70,7 +70,7 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDropp
         }
     }
 
-    private void pollAndProcessOnce() {
+    private void pollAndProcess() {
         while (true) {
             try {
                 PartitionedRunnable nextTask = partitionQueue.getNextTask(Duration.ofSeconds(5));
