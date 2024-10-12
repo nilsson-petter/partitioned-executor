@@ -2,6 +2,7 @@ package xyz.petnil.partitionedexecutor;
 
 import java.time.Duration;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +33,11 @@ class UnboundedPartitionQueue implements PartitionQueue {
     @Override
     public Queue<PartitionedRunnable> getQueue() {
         return new LinkedList<>(taskQueue);
+    }
+
+    @Override
+    public int getQueueSize() {
+        return taskQueue.size();
     }
 
 }

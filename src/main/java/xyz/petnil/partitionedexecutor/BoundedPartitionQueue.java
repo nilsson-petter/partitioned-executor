@@ -33,4 +33,10 @@ class BoundedPartitionQueue implements PartitionQueue {
         return new LinkedList<>(taskQueue);
     }
 
+    @Override
+    public int getQueueSize() {
+        return taskQueue.size();
+    }
+
+
 }

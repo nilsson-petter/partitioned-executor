@@ -1,6 +1,7 @@
 package xyz.petnil.partitionedexecutor;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Queue;
 
 public interface PartitionQueue {
@@ -11,6 +12,8 @@ public interface PartitionQueue {
     void setOnDroppedCallback(OnDroppedCallback callback);
 
     Queue<PartitionedRunnable> getQueue();
+
+    int getQueueSize();
 
     interface OnDroppedCallback {
         void onDropped(PartitionedRunnable task);

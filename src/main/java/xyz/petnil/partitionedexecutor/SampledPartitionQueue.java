@@ -50,8 +50,8 @@ class SampledPartitionQueue implements PartitionQueue {
     @Override
     public PartitionedRunnable getNextTask(Duration duration) throws InterruptedException {
         try {
-            DelayedObject delayedPartitionKey = partitionKeyQueue.poll(duration.toMillis(), TimeUnit.MILLISECONDS);
             mainLock.lock();
+            DelayedObject delayedPartitionKey = partitionKeyQueue.poll(duration.toMillis(), TimeUnit.MILLISECONDS);
             if (delayedPartitionKey != null) {
                 return taskPerPartitionKeyMap.remove(delayedPartitionKey.getObject());
             }
@@ -84,6 +84,11 @@ class SampledPartitionQueue implements PartitionQueue {
         } finally {
             mainLock.unlock();
         }
+    }
+
+    @Override
+    public int getQueueSize() {
+        return partitionKeyQueue.size();
     }
 
     private static class DelayedObject implements Delayed {
