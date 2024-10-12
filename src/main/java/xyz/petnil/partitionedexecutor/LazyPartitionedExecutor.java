@@ -25,28 +25,14 @@ class LazyPartitionedExecutor implements PartitionedExecutor {
         this.partitionCreator = partitionCreator;
     }
 
-    public void execute(Runnable task, Object partitionKey) {
-        execute(new PartitionedRunnable() {
-            @Override
-            public Object getPartitionKey() {
-                return partitionKey;
-            }
-
-            @Override
-            public Runnable getDelegate() {
-                return task;
-            }
-        });
-    }
-
     @Override
-    public void execute(PartitionedRunnable partitionedRunnable) {
+    public void execute(PartitionedRunnable task) {
         mainLock.lock();
         try {
-            int partitionNumber = partitioningFunction.getPartition(partitionedRunnable.getPartitionKey());
+            int partitionNumber = partitioningFunction.getPartition(task.getPartitionKey());
             Partition partition = partitions.computeIfAbsent(partitionNumber, partitionCreator::create);
             partition.startPartition();
-            partition.submitForExecution(partitionedRunnable);
+            partition.submitForExecution(task);
         } finally {
             mainLock.unlock();
         }
