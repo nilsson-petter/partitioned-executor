@@ -38,6 +38,11 @@ class LazyPartitionedExecutor implements PartitionedExecutor {
         }
     }
 
+    @Override
+    public PartitioningFunction getPartitioningFunction() {
+        return partitioningFunction;
+    }
+
 
     public void shutdown() {
         mainLock.lock();
