@@ -45,7 +45,7 @@ implementation 'xyz.petnil:partitioned-executor:1.0.0'
 
 ### Quick Start
 
-1. **Define a PartitionedRunnable**: A task that implements the `PartitionedRunnable` interface. Each task is assigned a partition key, which is used to determine which partition it will run on.
+1. **Define a PartitionedRunnable**: A task that implements the `PartitionedRunnable` interface. Each task has a partition key, which is used to determine which partition it will run on.
 
 ```java
 public class DocumentService {
