@@ -42,7 +42,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
      */
     public LazyLoadingPartitionedExecutor(Partitioner partitioner,
                                           PartitionCreator partitionCreator) {
-        this.partitions = new ConcurrentHashMap<>();
+        this.partitions = new ConcurrentHashMap<>(partitioner.getMaxNumberOfPartitions());
         this.partitioner = Objects.requireNonNull(partitioner);
         this.partitionCreator = Objects.requireNonNull(partitionCreator);
     }
