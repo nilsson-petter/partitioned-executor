@@ -6,11 +6,11 @@ import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-class UnboundedPartitionQueue implements PartitionQueue {
+class UnboundedFifoPartitionQueue implements PartitionQueue {
 
     private final LinkedBlockingQueue<PartitionedRunnable> taskQueue;
 
-    public UnboundedPartitionQueue() {
+    public UnboundedFifoPartitionQueue() {
         taskQueue = new LinkedBlockingQueue<>();
     }
 

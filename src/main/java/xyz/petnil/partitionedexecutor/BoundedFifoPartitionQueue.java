@@ -6,10 +6,10 @@ import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-class BoundedPartitionQueue implements PartitionQueue {
+class BoundedFifoPartitionQueue implements PartitionQueue {
     private final ArrayBlockingQueue<PartitionedRunnable> taskQueue;
 
-    public BoundedPartitionQueue(int capacity) {
+    public BoundedFifoPartitionQueue(int capacity) {
         taskQueue = new ArrayBlockingQueue<>(capacity);
     }
 

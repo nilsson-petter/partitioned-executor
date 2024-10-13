@@ -37,7 +37,7 @@ public class PartitionedExecutorBuilder {
         private final PartitionedExecutorBuilder parentBuilder;
         private PartitionThreadFactoryCreator threadFactory;
         private String threadNamePrefix = "SingleThreadedPartitionWorker";
-        private PartitionQueueCreator partitionQueueCreator = PartitionQueues::unbounded;
+        private PartitionQueueCreator partitionQueueCreator = PartitionQueues::unboundedFifo;
         private Partition.Callback callback;
 
 

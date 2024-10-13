@@ -10,7 +10,7 @@ public class PartitionedExecutors {
         return PartitionedExecutorBuilder.newBuilder(maxPartitions)
                 .withPartitioner(getPartitioner(maxPartitions))
                 .configurePartitionCreator()
-                .withPartitionQueueCreator(PartitionQueues::unbounded)
+                .withPartitionQueueCreator(PartitionQueues::unboundedFifo)
                 .buildPartitionCreator()
                 .build();
     }
@@ -19,7 +19,7 @@ public class PartitionedExecutors {
         return PartitionedExecutorBuilder.newBuilder(maxPartitions)
                 .withPartitioner(getPartitioner(maxPartitions))
                 .configurePartitionCreator()
-                .withPartitionQueueCreator(() -> PartitionQueues.bounded(maxQueueSize))
+                .withPartitionQueueCreator(() -> PartitionQueues.boundedFifo(maxQueueSize))
                 .buildPartitionCreator()
                 .build();
     }
