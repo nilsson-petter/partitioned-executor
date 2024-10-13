@@ -14,7 +14,7 @@
 
 - **Task Partitioning**: Tasks are routed to specific partitions based on a user-defined partitioning function.
 - **Parallel Execution**: Partitions execute tasks concurrently, allowing for efficient utilization of resources.
-- **Synchronous within Partition**: Tasks within each partition are executed one at a time in the order they are submitted.
+- **Synchronous within Partition**: Tasks can be executed synchronously in order of arrival, depending on implementation chosen.
 - **Graceful Shutdown**: Provides mechanisms to await task completion or force shutdown and retrieve pending tasks.
 - **Callbacks**: Supports task execution callbacks.
 - **Customization**: Users can implement custom partitioning strategies, partitions and partition queues to control behaviour.
@@ -126,22 +126,26 @@ public class CustomPartitioner implements Partitioner {
 
 ### Partition Queues
 
-Three implementations of `PartitionQueue` are provided. Users are free to implement their own.
+Four implementations of `PartitionQueue` are provided. Users are free to implement their own.
 
-1. **Unbounded Partition Queue**:
+1. **Unbounded Fifo Partition Queue**:
    - This is a simple queue backed by a `LinkedBlockingQueue`.
-   - Usage: `PartitionQueues.unbounded()`
+   - Usage: `PartitionQueues.unboundedFifo()`
 
-2. **Bounded Partition Queue**:
+2. **Bounded Fifo Partition Queue**:
    - This is a simple queue backed by a `ArrayBlockingQueue`.
-   - Usage: `PartitionQueues.bounded(100_000)`
+   - Usage: `PartitionQueues.boundedFifo(100_000)`
 
-2. **Sampled Partition Queue**:
+3**Sampled Partition Queue**:
    - This is a simple queue backed by a `DelayQueue` of partition keys, and a `ConcurrentHashMap` of tasks.
    - Newer tasks replace.
-   - The provided SamplingFunction controls how long the partition key should be delayed for.
+   - The provided `SamplingFunction` controls how long the partition key should be delayed for.
    - Already queued partition keys will not be queued again, limiting the queue size to the amount of partition keys.
    - Usage: `PartitionQueues.sampled(key -> Duration.ofSeconds(1))`
+4**Priority Partition Queue**:
+   - This is a simple queue backed by a `PriorityBlockingQueue`.
+   - The provided `Comparator<PartitionedRunnable>` defines the priority of the task.
+   - Usage: `PartitionQueues.priority((t1, t2) -> 0)`
 
 ### More Examples
 ```java
