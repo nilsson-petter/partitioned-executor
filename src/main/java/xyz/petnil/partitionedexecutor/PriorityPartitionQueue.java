@@ -3,6 +3,7 @@ package xyz.petnil.partitionedexecutor;
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.LinkedList;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -13,17 +14,19 @@ class PriorityPartitionQueue implements PartitionQueue {
     private final Comparator<PartitionedRunnable> comparator;
 
     public PriorityPartitionQueue(Comparator<PartitionedRunnable> comparator) {
-        this.comparator = comparator;
+        this.comparator = Objects.requireNonNull(comparator);
         taskQueue = new PriorityBlockingQueue<>();
     }
 
     @Override
-    public boolean enqueue(PartitionedRunnable partitionedRunnable) {
-        return taskQueue.add(new PriorityTask(partitionedRunnable));
+    public boolean enqueue(PartitionedRunnable task) {
+        Objects.requireNonNull(task);
+        return taskQueue.add(new PriorityTask(task));
     }
 
     @Override
     public PartitionedRunnable getNextTask(Duration timeout) throws InterruptedException {
+        Objects.requireNonNull(timeout);
         PriorityTask poll = taskQueue.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
         if (poll != null) {
             return poll.delegate;

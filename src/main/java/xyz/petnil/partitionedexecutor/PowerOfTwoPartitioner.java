@@ -1,5 +1,7 @@
 package xyz.petnil.partitionedexecutor;
 
+import java.util.Objects;
+
 class PowerOfTwoPartitioner implements Partitioner {
 
     private final int maxPartitions;
@@ -18,10 +20,7 @@ class PowerOfTwoPartitioner implements Partitioner {
 
     @Override
     public int getPartition(Object partitionKey) {
-        if (partitionKey == null) {
-            throw new NullPointerException("partitionKey must not be null");
-        }
-
+        Objects.requireNonNull(partitionKey);
         return partitionKey.hashCode() & (maxPartitions - 1);
     }
 

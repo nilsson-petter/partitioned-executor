@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.DelayQueue;
@@ -25,17 +26,18 @@ class SampledPartitionQueue implements PartitionQueue {
     private final AtomicReference<OnDroppedCallback> onDroppedCallback = new AtomicReference<>();
 
     public SampledPartitionQueue(SamplingFunction samplingFunction) {
-        this.samplingFunction = samplingFunction;
+        this.samplingFunction = Objects.requireNonNull(samplingFunction);
         this.partitionKeyQueue = new DelayQueue<>();
         this.taskPerPartitionKeyMap = new HashMap<>();
     }
 
     @Override
-    public boolean enqueue(PartitionedRunnable partitionedRunnable) {
+    public boolean enqueue(PartitionedRunnable task) {
+        Objects.requireNonNull(task);
         try {
-            Object partitionKey = partitionedRunnable.getPartitionKey();
+            Object partitionKey = task.getPartitionKey();
             mainLock.lock();
-            PartitionedRunnable previousTask = taskPerPartitionKeyMap.put(partitionKey, partitionedRunnable);
+            PartitionedRunnable previousTask = taskPerPartitionKeyMap.put(partitionKey, task);
             if (previousTask == null) {
                 return partitionKeyQueue.add(new DelayedObject(partitionKey, samplingFunction.getSamplingTime(partitionKey).toMillis()));
             } else {
@@ -49,6 +51,7 @@ class SampledPartitionQueue implements PartitionQueue {
 
     @Override
     public PartitionedRunnable getNextTask(Duration duration) throws InterruptedException {
+        Objects.requireNonNull(duration);
         try {
             mainLock.lock();
             DelayedObject delayedPartitionKey = partitionKeyQueue.poll(duration.toMillis(), TimeUnit.MILLISECONDS);

@@ -59,6 +59,7 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDropp
 
     @Override
     public void submitForExecution(PartitionedRunnable task) {
+        Objects.requireNonNull(task);
         if (interrupted.get() || !partitionQueue.enqueue(task)) {
             onRejected(task);
         } else {
@@ -100,6 +101,7 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDropp
 
     @Override
     public boolean awaitTaskCompletion(Duration duration) throws InterruptedException {
+        Objects.requireNonNull(duration);
         if (thread != null) {
             return thread.join(duration);
         }

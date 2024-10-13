@@ -1,5 +1,7 @@
 package xyz.petnil.partitionedexecutor;
 
+import java.util.Objects;
+
 class GeneralPurposePartitioner implements Partitioner {
 
     private final int maxPartitions;
@@ -14,9 +16,7 @@ class GeneralPurposePartitioner implements Partitioner {
 
     @Override
     public int getPartition(Object partitionKey) {
-        if (partitionKey == null) {
-            throw new NullPointerException("partitionKey must not be null");
-        }
+        Objects.requireNonNull(partitionKey);
 
         int hash = partitionKey.hashCode();
         if (hash == Integer.MIN_VALUE) {
