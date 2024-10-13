@@ -37,5 +37,4 @@ public class PartitionedExecutors {
         return PowerOfTwo.isPowerOfTwo(maxPartitions) ? Partitioners::powerOfTwo : Partitioners::generalPurpose;
     }
 
-
 }
