@@ -59,16 +59,13 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDropp
 
     @Override
     public void submitForExecution(PartitionedRunnable task) {
-        if (!interrupted.get()) {
-            if (partitionQueue.enqueue(task)) {
-                onSubmitted(task);
-            } else {
-                onRejected(task);
-            }
-        } else {
+        if (interrupted.get() || !partitionQueue.enqueue(task)) {
             onRejected(task);
+        } else {
+            onSubmitted(task);
         }
     }
+
 
     private void pollAndProcess() {
         while (true) {
