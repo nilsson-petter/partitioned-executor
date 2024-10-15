@@ -1,14 +1,18 @@
 # Partitioned Executor Library
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.example/partitioned-executor.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:com.example%20a:partitioned-executor)
-[![Build Status](https://img.shields.io/github/workflow/status/your-repo/partitioned-executor/CI)](https://github.com/your-repo/partitioned-executor/actions)
-[![License](https://img.shields.io/github/license/your-repo/partitioned-executor)](https://opensource.org/licenses/MIT)
+[![Maven Central](https://img.shields.io/maven-central/v/xyz.petnil/partitioned-executor.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:xyz.petnil%20a:partitioned-executor)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/nilsson-petter/partitioned-executor/ci.yml?branch=main)](https://github.com/nilsson-petter/partitioned-executor/actions)
+[![License](https://img.shields.io/github/license/nilsson-petter/partitioned-executor)](https://opensource.org/licenses/MIT)
 
 ---
 
 ## Overview
 
-`Partitioned Executor` is a lightweight Java library designed for executing tasks in parallel, while ensuring that tasks belonging to the same logical "partition" are executed synchronously. This is useful in scenarios where you need to run tasks concurrently across multiple partitions but must maintain strict ordering within each partition.
+Partitioned Executor is a lightweight Java library designed for executing tasks in parallel across different logical partitions. 
+In the most common use case, tasks that belong to the same logical partition are executed synchronously, ensuring strict ordering. 
+However, the library offers users the flexibility to implement their own rules for how and when tasks are executed within each partition. 
+This allows for greater customization and adaptability to various concurrency requirements, making it suitable for scenarios where tasks need to be run concurrently across multiple partitions while maintaining control over their execution order.
+
 
 ### Key Features
 
@@ -18,6 +22,12 @@
 - **Graceful Shutdown**: Provides mechanisms to await task completion or force shutdown and retrieve pending tasks.
 - **Callbacks**: Supports task execution callbacks.
 - **Customization**: Users can implement custom partitioning strategies, partitions and partition queues to control behaviour.
+
+---
+
+## Requirements
+
+- **Java Version**: This library requires **Java 21** or higher to use features like Virtual Threads. Please ensure you have the appropriate version installed.
 
 ---
 
