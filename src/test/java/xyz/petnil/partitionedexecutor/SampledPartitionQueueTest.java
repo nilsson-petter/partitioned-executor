@@ -55,6 +55,11 @@ class SampledPartitionQueueTest {
         assertThat(result).isTrue();
         assertThat(sampledPartitionQueue.getQueueSize()).isEqualTo(1); // Only the new task should remain
 
+        assertThat(sampledPartitionQueue.getState())
+                .hasSize(1)
+                .containsValue(secondTask)
+                .containsKey(partitionKey);
+
         PartitionedRunnable firstInQueue = sampledPartitionQueue.getNextTask(Duration.ofSeconds(1));
         assertEquals(secondTask, firstInQueue);
 

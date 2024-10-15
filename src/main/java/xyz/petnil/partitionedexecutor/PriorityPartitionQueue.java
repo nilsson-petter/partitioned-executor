@@ -11,11 +11,16 @@ import java.util.stream.Collectors;
 
 class PriorityPartitionQueue implements PartitionQueue {
     private final PriorityBlockingQueue<PriorityTask> taskQueue;
+
     private final Comparator<PartitionedRunnable> comparator;
 
     public PriorityPartitionQueue(Comparator<PartitionedRunnable> comparator) {
         this.comparator = Objects.requireNonNull(comparator);
-        taskQueue = new PriorityBlockingQueue<>();
+        this.taskQueue = new PriorityBlockingQueue<>();
+    }
+
+    public Comparator<PartitionedRunnable> getComparator() {
+        return comparator;
     }
 
     @Override

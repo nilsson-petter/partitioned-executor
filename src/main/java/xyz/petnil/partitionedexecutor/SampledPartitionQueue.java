@@ -31,6 +31,14 @@ class SampledPartitionQueue implements PartitionQueue {
         this.taskPerPartitionKeyMap = new HashMap<>();
     }
 
+    public SamplingFunction getSamplingFunction() {
+        return samplingFunction;
+    }
+
+    public Map<Object, PartitionedRunnable> getState() {
+        return new HashMap<>(taskPerPartitionKeyMap);
+    }
+
     @Override
     public boolean enqueue(PartitionedRunnable task) {
         Objects.requireNonNull(task);
