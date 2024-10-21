@@ -1,12 +1,10 @@
 package xyz.petnil.partitionedexecutor;
 
-import java.time.Duration;
-
 public class PartitionedExecutors {
     private PartitionedExecutors() {
     }
 
-    public static PartitionedExecutor unbounded(int maxPartitions) {
+    public static PartitionedExecutor unboundedFifo(int maxPartitions) {
         return PartitionedExecutorBuilder.newBuilder(maxPartitions)
                 .withPartitioner(getPartitioner(maxPartitions))
                 .configurePartitionCreator()
@@ -15,7 +13,7 @@ public class PartitionedExecutors {
                 .build();
     }
 
-    public static PartitionedExecutor bounded(int maxPartitions, int maxQueueSize) {
+    public static PartitionedExecutor boundedFifo(int maxPartitions, int maxQueueSize) {
         return PartitionedExecutorBuilder.newBuilder(maxPartitions)
                 .withPartitioner(getPartitioner(maxPartitions))
                 .configurePartitionCreator()
@@ -24,11 +22,11 @@ public class PartitionedExecutors {
                 .build();
     }
 
-    public static PartitionedExecutor sampled(int maxPartitions, Duration sampleTime) {
+    public static PartitionedExecutor sampled(int maxPartitions, SamplingFunction samplingFunction) {
         return PartitionedExecutorBuilder.newBuilder(maxPartitions)
                 .withPartitioner(getPartitioner(maxPartitions))
                 .configurePartitionCreator()
-                .withPartitionQueueCreator(() -> PartitionQueues.sampled(o -> sampleTime))
+                .withPartitionQueueCreator(() -> PartitionQueues.sampled(samplingFunction))
                 .buildPartitionCreator()
                 .build();
     }

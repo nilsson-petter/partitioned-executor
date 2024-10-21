@@ -19,6 +19,7 @@ This allows for greater customization and adaptability to various concurrency re
 - **Task Partitioning**: Tasks are routed to specific partitions based on a user-defined partitioning function.
 - **Parallel Execution**: Partitions execute tasks concurrently, allowing for efficient utilization of resources.
 - **Synchronous within Partition**: Tasks can be executed synchronously in order of arrival, depending on implementation chosen.
+- **Debouncing**: Ensures that only the latest task per partition key is executed within a specified timeframe.
 - **Graceful Shutdown**: Provides mechanisms to await task completion or force shutdown and retrieve pending tasks.
 - **Callbacks**: Supports task execution callbacks.
 - **Customization**: Users can implement custom partitioning strategies, partitions and partition queues to control behaviour.
@@ -39,7 +40,7 @@ Add the following dependency to your `pom.xml`:
 <dependency>
   <groupId>xyz.petnil</groupId>
   <artifactId>partitioned-executor</artifactId>
-  <version>1.0.0</version>
+  <version>0.0.1-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -59,7 +60,7 @@ implementation 'xyz.petnil:partitioned-executor:1.0.0'
 
 ```java
 public class DocumentService {
-    private final DocumentDao dao;
+    private final DocumentRepository repository;
     // ...
     // ...
     private final class PersistDocumentTask implements PartitionedRunnable {
@@ -76,18 +77,17 @@ public class DocumentService {
 
         @Override
         public Runnable getDelegate() {
-            return () -> dao.save(document);
+            return () -> repository.save(document);
         }
     }
 }
 ```
 
-2. **Create a PartitionedExecutor**: Instantiate the `PartitionedExecutor`, specifying your partitioning function and partition creation logic.
+2. **Create a PartitionedExecutor**: Instantiate the `PartitionedExecutor`, either with the predefined executors in `PartitionedExecutors`
+or with `PartitionedExecutorBuilder`.
 
 ```java
-PartitionedExecutors.unbounded(8);
-PartitionedExecutors.bounded(8, 100_000);
-PartitionedExecutors.sampled(8, Duration.ofSeconds(1));
+PartitionedExecutor executor = PartitionedExecutors.unboundedFifo(8);
 ```
 
 3. **Submit Tasks**: Submit tasks for execution.
@@ -147,17 +147,66 @@ Four implementations of `PartitionQueue` are provided. Users are free to impleme
    - Usage: `PartitionQueues.boundedFifo(100_000)`
 
 3**Sampled Partition Queue**:
-   - This is a simple queue backed by a `DelayQueue` of partition keys, and a `ConcurrentHashMap` of tasks.
-   - Newer tasks replace.
+   - This queue is backed by a `DelayQueue` of partition keys, and a `ConcurrentHashMap` of tasks.
+   - Newer tasks supersedes older in the map. Partition keys already in the queue will not be queued again, limiting the queue size to the amount of partition keys.
    - The provided `SamplingFunction` controls how long the partition key should be delayed for.
-   - Already queued partition keys will not be queued again, limiting the queue size to the amount of partition keys.
    - Usage: `PartitionQueues.sampled(key -> Duration.ofSeconds(1))`
+
 4**Priority Partition Queue**:
-   - This is a simple queue backed by a `PriorityBlockingQueue`.
+   - This queue is backed by a `PriorityBlockingQueue`.
    - The provided `Comparator<PartitionedRunnable>` defines the priority of the task.
    - Usage: `PartitionQueues.priority((t1, t2) -> 0)`
 
-### More Examples
+### Examples
+
+#### 1. FIFO In Each Partition
+Useful for when each task matters.
+```java
+private record TestPartitionedRunnable(Object partitionKey, Object id) implements PartitionedRunnable {
+   @Override
+   public Object getPartitionKey() {
+      return partitionKey;
+   }
+
+   @Override
+   public Runnable getDelegate() {
+      return () ->
+              System.out.printf(
+                      "[%s] [%s] Task with partitionKey=%s id=%s running%n",
+                      LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS),
+                      Thread.currentThread().getName(),
+                      partitionKey,
+                      id
+              );
+   }
+}
+...
+...
+PartitionedExecutor unbounded = PartitionedExecutors.unboundedFifo(5);
+unbounded.execute(new TestPartitionedRunnable("AAPL", 235.00));
+unbounded.execute(new TestPartitionedRunnable("MSFT", 418.16));
+unbounded.execute(new TestPartitionedRunnable("AAPL", 234.93));
+unbounded.execute(new TestPartitionedRunnable("MSFT", 418.11));
+unbounded.close();
+```
+Output
+```
+[2024-10-19T22:20:15.494] [SingleThreadedPartitionWorker-4] Task with partitionKey=MSFT id=418.16 running
+[2024-10-19T22:20:15.495] [SingleThreadedPartitionWorker-4] Task with partitionKey=MSFT id=418.11 running
+[2024-10-19T22:20:15.494] [SingleThreadedPartitionWorker-1] Task with partitionKey=AAPL id=235.0 running
+[2024-10-19T22:20:15.495] [SingleThreadedPartitionWorker-1] Task with partitionKey=AAPL id=234.93 running
+```
+
+#### 2. Sampled
+Useful when you want to control how often tasks with the same partition key is executed.
+
+```java
+
+```
+
+#### Callbacks
+
+#### 
 ```java
 class DocumentService implements Partition.Callback {
     private final PartitionedExecutor executor;
