@@ -47,7 +47,7 @@ Add the following dependency to your `pom.xml`:
 Or with Gradle:
 
 ```gradle
-implementation 'xyz.petnil:partitioned-executor:1.0.0'
+implementation 'xyz.petnil:partitioned-executor:0.0.1-SNAPSHOT'
 ```
 
 ---
@@ -87,7 +87,7 @@ public class DocumentService {
 or with `PartitionedExecutorBuilder`.
 
 ```java
-PartitionedExecutor executor = PartitionedExecutors.unboundedFifo(8);
+PartitionedExecutor executor = PartitionedExecutors.fifo(8, Integer.MAX_VALUE);
 ```
 
 3. **Submit Tasks**: Submit tasks for execution.
@@ -138,21 +138,17 @@ public class CustomPartitioner implements Partitioner {
 
 Four implementations of `PartitionQueue` are provided. Users are free to implement their own.
 
-1. **Unbounded Fifo Partition Queue**:
-   - This is a simple queue backed by a `LinkedBlockingQueue`.
-   - Usage: `PartitionQueues.unboundedFifo()`
-
-2. **Bounded Fifo Partition Queue**:
+1. **Fifo Partition Queue**:
    - This is a simple queue backed by a `ArrayBlockingQueue`.
-   - Usage: `PartitionQueues.boundedFifo(100_000)`
+   - Usage: `PartitionQueues.fifo(100_000)`
 
-3**Sampled Partition Queue**:
+2. **Sampled Partition Queue**:
    - This queue is backed by a `DelayQueue` of partition keys, and a `ConcurrentHashMap` of tasks.
    - Newer tasks supersedes older in the map. Partition keys already in the queue will not be queued again, limiting the queue size to the amount of partition keys.
    - The provided `SamplingFunction` controls how long the partition key should be delayed for.
    - Usage: `PartitionQueues.sampled(key -> Duration.ofSeconds(1))`
 
-4**Priority Partition Queue**:
+3. **Priority Partition Queue**:
    - This queue is backed by a `PriorityBlockingQueue`.
    - The provided `Comparator<PartitionedRunnable>` defines the priority of the task.
    - Usage: `PartitionQueues.priority((t1, t2) -> 0)`
@@ -160,7 +156,7 @@ Four implementations of `PartitionQueue` are provided. Users are free to impleme
 ### Examples
 
 #### 1. FIFO In Each Partition
-Useful for when each task matters.
+Useful for when each must be executed.
 ```java
 private record TestPartitionedRunnable(Object partitionKey, Object id) implements PartitionedRunnable {
    @Override
@@ -182,12 +178,12 @@ private record TestPartitionedRunnable(Object partitionKey, Object id) implement
 }
 ...
 ...
-PartitionedExecutor unbounded = PartitionedExecutors.unboundedFifo(5);
-unbounded.execute(new TestPartitionedRunnable("AAPL", 235.00));
-unbounded.execute(new TestPartitionedRunnable("MSFT", 418.16));
-unbounded.execute(new TestPartitionedRunnable("AAPL", 234.93));
-unbounded.execute(new TestPartitionedRunnable("MSFT", 418.11));
-unbounded.close();
+PartitionedExecutor fifo = PartitionedExecutors.fifo(5, Integer.MAX_VALUE);
+fifo.execute(new TestPartitionedRunnable("AAPL", 235.00));
+fifo.execute(new TestPartitionedRunnable("MSFT", 418.16));
+fifo.execute(new TestPartitionedRunnable("AAPL", 234.93));
+fifo.execute(new TestPartitionedRunnable("MSFT", 418.11));
+fifo.close();
 ```
 Output
 ```
@@ -206,34 +202,36 @@ Useful when you want to control how often tasks with the same partition key is e
 
 #### Callbacks
 
-#### 
+####
+
 ```java
-class DocumentService implements Partition.Callback {
-    private final PartitionedExecutor executor;
-    public DocumentService() {
-        executor = PartitionedExecutorBuilder.newBuilder(8)
-                .withPartitioner(Partitioners::powerOfTwo)
-                .configurePartitionCreator()
-                    .withPartitionQueueCreator(PartitionQueues::unbounded)
-                    .withThreadNamePrefix("my-executor")
-                    .withCallback(this)
-                .buildPartitionCreator()
-                .build();
-    }
+class DocumentService implements PartitionedExecutor.Callback {
+   private final PartitionedExecutor executor;
 
-    @Override
-    public void onSuccess(int partition, PartitionedRunnable task) {
-        if (task instanceof PersistDocumentTask pdt) {
-            // Handle success
-        }
-    }
+   public DocumentService() {
+      executor = PartitionedExecutorBuilder.newBuilder(8)
+              .withPartitioner(Partitioners::powerOfTwo)
+              .withCallback(this)
+              .configurePartitionCreator()
+                .withPartitionQueueCreator(() -> PartitionQueues.fifo(Integer.MAX_VALUE))
+                .withThreadNamePrefix("my-executor")
+              .buildPartitionCreator()
+              .build();
+   }
 
-    @Override
-    public void onError(int partition, PartitionedRunnable task, Exception exception) {
-        if (task instanceof PersistDocumentTask pdt) {
-           // Handle error
-        }
-    }
+   @Override
+   public void onSuccess(int partition, PartitionedRunnable task) {
+      if (task instanceof PersistDocumentTask pdt) {
+         // Handle success
+      }
+   }
+
+   @Override
+   public void onError(int partition, PartitionedRunnable task, Exception exception) {
+      if (task instanceof PersistDocumentTask pdt) {
+         // Handle error
+      }
+   }
 }
 ```
 
