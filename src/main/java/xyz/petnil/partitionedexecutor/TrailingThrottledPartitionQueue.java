@@ -16,23 +16,23 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-class SampledPartitionQueue implements PartitionQueue {
+class TrailingThrottledPartitionQueue implements PartitionQueue {
     private final Lock mainLock = new ReentrantLock();
 
     private final BlockingQueue<DelayedObject> partitionKeyQueue;
     private final Map<Object, PartitionedRunnable> taskPerPartitionKeyMap;
-    private final SamplingFunction samplingFunction;
+    private final ThrottlingFunction throttlingFunction;
 
     private final AtomicReference<Callback> onDroppedCallback = new AtomicReference<>();
 
-    public SampledPartitionQueue(SamplingFunction samplingFunction) {
-        this.samplingFunction = Objects.requireNonNull(samplingFunction);
+    public TrailingThrottledPartitionQueue(ThrottlingFunction throttlingFunction) {
+        this.throttlingFunction = Objects.requireNonNull(throttlingFunction);
         this.partitionKeyQueue = new DelayQueue<>();
         this.taskPerPartitionKeyMap = new HashMap<>();
     }
 
-    public SamplingFunction getSamplingFunction() {
-        return samplingFunction;
+    public ThrottlingFunction getThrottlingFunction() {
+        return throttlingFunction;
     }
 
     public Map<Object, PartitionedRunnable> getState() {
@@ -47,7 +47,7 @@ class SampledPartitionQueue implements PartitionQueue {
             mainLock.lock();
             PartitionedRunnable previousTask = taskPerPartitionKeyMap.put(partitionKey, task);
             if (previousTask == null) {
-                return partitionKeyQueue.add(new DelayedObject(partitionKey, samplingFunction.getSamplingTime(partitionKey).toMillis()));
+                return partitionKeyQueue.add(new DelayedObject(partitionKey, throttlingFunction.getThrottlingInterval(partitionKey).toMillis()));
             } else {
                 onDropped(previousTask);
             }

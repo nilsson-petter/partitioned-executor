@@ -142,11 +142,11 @@ Four implementations of `PartitionQueue` are provided. Users are free to impleme
    - This is a simple queue backed by a `ArrayBlockingQueue`.
    - Usage: `PartitionQueues.fifo(100_000)`
 
-2. **Sampled Partition Queue**:
+2. **Trailing Throttled Partition Queue**:
    - This queue is backed by a `DelayQueue` of partition keys, and a `ConcurrentHashMap` of tasks.
    - Newer tasks supersedes older in the map. Partition keys already in the queue will not be queued again, limiting the queue size to the amount of partition keys.
-   - The provided `SamplingFunction` controls how long the partition key should be delayed for.
-   - Usage: `PartitionQueues.sampled(key -> Duration.ofSeconds(1))`
+   - The provided `ThrottlingFunction` controls how long the partition key should be delayed for.
+   - Usage: `PartitionQueues.trailingThrottled(key -> Duration.ofSeconds(1))`
 
 3. **Priority Partition Queue**:
    - This queue is backed by a `PriorityBlockingQueue`.
@@ -193,7 +193,7 @@ Output
 [2024-10-19T22:20:15.495] [SingleThreadedPartitionWorker-1] Task with partitionKey=AAPL id=234.93 running
 ```
 
-#### 2. Sampled
+#### 2. Trailing Throttled
 Useful when you want to control how often tasks with the same partition key is executed.
 
 ```java

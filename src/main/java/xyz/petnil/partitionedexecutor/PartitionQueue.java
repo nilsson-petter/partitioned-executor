@@ -59,7 +59,7 @@ public interface PartitionQueue {
 
     /**
      * Sets a callback to be invoked when tasks are dropped from the queue
-     * (e.g., due to sampling behaviour). The callback will be called
+     * (e.g., due to throttling). The callback will be called
      * with the task that was dropped.
      *
      * @param callback the {@link Callback} to be invoked when tasks are dropped

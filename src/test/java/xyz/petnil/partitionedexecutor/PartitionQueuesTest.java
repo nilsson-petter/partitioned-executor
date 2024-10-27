@@ -17,11 +17,11 @@ class PartitionQueuesTest {
     }
 
     @Test
-    void sampled() {
-        SamplingFunction samplingFunction = o -> Duration.ZERO;
-        PartitionQueue partitionQueue = PartitionQueues.sampled(samplingFunction);
-        assertThat(partitionQueue).isInstanceOf(SampledPartitionQueue.class);
-        assertThat(((SampledPartitionQueue) partitionQueue).getSamplingFunction()).isEqualTo(samplingFunction);
+    void trailingThrottled() {
+        ThrottlingFunction throttlingFunction = o -> Duration.ZERO;
+        PartitionQueue partitionQueue = PartitionQueues.trailingThrottled(throttlingFunction);
+        assertThat(partitionQueue).isInstanceOf(TrailingThrottledPartitionQueue.class);
+        assertThat(((TrailingThrottledPartitionQueue) partitionQueue).getThrottlingFunction()).isEqualTo(throttlingFunction);
     }
 
     @Test

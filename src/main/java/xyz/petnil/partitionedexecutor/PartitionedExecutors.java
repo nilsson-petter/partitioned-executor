@@ -13,11 +13,11 @@ public class PartitionedExecutors {
                 .build();
     }
 
-    public static PartitionedExecutor sampled(int maxPartitions, SamplingFunction samplingFunction) {
+    public static PartitionedExecutor trailingThrottled(int maxPartitions, ThrottlingFunction throttlingFunction) {
         return PartitionedExecutorBuilder.newBuilder(maxPartitions)
                 .withPartitioner(getPartitioner(maxPartitions))
                 .configurePartitionCreator()
-                .withPartitionQueueCreator(() -> PartitionQueues.sampled(samplingFunction))
+                .withPartitionQueueCreator(() -> PartitionQueues.trailingThrottled(throttlingFunction))
                 .buildPartitionCreator()
                 .build();
     }

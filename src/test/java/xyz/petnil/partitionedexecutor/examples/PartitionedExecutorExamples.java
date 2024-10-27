@@ -14,14 +14,14 @@ public class PartitionedExecutorExamples {
 
     @Test
     void example2() throws Exception {
-        PartitionedExecutor sampled = PartitionedExecutors.sampled(2, o -> Duration.ofSeconds(1));
-        sampled.execute(new TestPartitionedRunnable(0, 0));
-        sampled.execute(new TestPartitionedRunnable(0, 1));
-        sampled.execute(new TestPartitionedRunnable(0, 99));
-        sampled.execute(new TestPartitionedRunnable(1, 0));
-        sampled.execute(new TestPartitionedRunnable(1, 1));
-        sampled.execute(new TestPartitionedRunnable(1, 99));
-        sampled.close();
+        PartitionedExecutor trailingThrottled = PartitionedExecutors.trailingThrottled(2, o -> Duration.ofSeconds(1));
+        trailingThrottled.execute(new TestPartitionedRunnable(0, 0));
+        trailingThrottled.execute(new TestPartitionedRunnable(0, 1));
+        trailingThrottled.execute(new TestPartitionedRunnable(0, 99));
+        trailingThrottled.execute(new TestPartitionedRunnable(1, 0));
+        trailingThrottled.execute(new TestPartitionedRunnable(1, 1));
+        trailingThrottled.execute(new TestPartitionedRunnable(1, 99));
+        trailingThrottled.close();
     }
 
     private record TestPartitionedRunnable(Object partitionKey, Object id) implements PartitionedRunnable {

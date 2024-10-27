@@ -10,8 +10,8 @@ public class PartitionQueues {
         return new FifoPartitionQueue(capacity);
     }
 
-    public static PartitionQueue sampled(SamplingFunction samplingFunction) {
-        return new SampledPartitionQueue(samplingFunction);
+    public static PartitionQueue trailingThrottled(ThrottlingFunction throttlingFunction) {
+        return new TrailingThrottledPartitionQueue(throttlingFunction);
     }
 
     public static PartitionQueue priority(Comparator<PartitionedRunnable> comparator) {
