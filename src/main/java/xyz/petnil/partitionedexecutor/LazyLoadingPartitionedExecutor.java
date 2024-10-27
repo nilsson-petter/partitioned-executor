@@ -144,7 +144,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
         mainLock.lock();
         try {
             HashMap<Integer, Queue<PartitionedRunnable>> tasksPerPartition = new HashMap<>();
-            partitions.values().forEach(p -> tasksPerPartition.put(p.getPartitionNumber(), p.forceShutdownAndGetPending()));
+            partitions.forEach((key, value) -> tasksPerPartition.put(key, value.forceShutdownAndGetPending()));
             return tasksPerPartition;
         } finally {
             mainLock.unlock();

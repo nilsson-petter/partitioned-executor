@@ -13,7 +13,6 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     private final Lock mainLock = new ReentrantLock();
     private final AtomicBoolean isShutdownSignaled = new AtomicBoolean(false);
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
-    private final int partitionNumber;
     private final PartitionQueue partitionQueue;
     private final ThreadFactory threadFactory;
     private final AtomicReference<Callback> callback;
@@ -21,21 +20,14 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     private Thread thread;
 
     public SingleThreadedPartitionWorker(
-            int partitionNumber,
             PartitionQueue partitionQueue,
             ThreadFactory threadFactory,
             Callback callback
     ) {
-        this.partitionNumber = partitionNumber;
         this.partitionQueue = Objects.requireNonNull(partitionQueue);
         this.partitionQueue.setCallback(this);
         this.threadFactory = Objects.requireNonNull(threadFactory);
         this.callback = new AtomicReference<>(callback);
-    }
-
-    @Override
-    public int getPartitionNumber() {
-        return partitionNumber;
     }
 
     @Override
@@ -143,28 +135,28 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     private void onSubmitted(PartitionedRunnable task) {
         Callback cb = callback.get();
         if (cb != null) {
-            cb.onSubmitted(partitionNumber, task);
+            cb.onSubmitted(task);
         }
     }
 
     private void onSuccess(PartitionedRunnable task) {
         Callback cb = callback.get();
         if (cb != null) {
-            cb.onSuccess(partitionNumber, task);
+            cb.onSuccess(task);
         }
     }
 
     private void onError(PartitionedRunnable task, Exception e) {
         Callback cb = callback.get();
         if (cb != null) {
-            cb.onError(partitionNumber, task, e);
+            cb.onError(task, e);
         }
     }
 
     private void onRejected(PartitionedRunnable task) {
         Callback cb = callback.get();
         if (cb != null) {
-            cb.onRejected(partitionNumber, task);
+            cb.onRejected(task);
         }
     }
 
@@ -172,7 +164,7 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     public void onDropped(PartitionedRunnable task) {
         Callback cb = callback.get();
         if (cb != null) {
-            cb.onDropped(partitionNumber, task);
+            cb.onDropped(task);
         }
     }
 

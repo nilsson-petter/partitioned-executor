@@ -26,13 +26,6 @@ import java.util.Queue;
 public interface Partition extends AutoCloseable, PartitionQueue.Callback {
 
     /**
-     * Returns the unique number assigned to this partition.
-     *
-     * @return the partition number
-     */
-    int getPartitionNumber();
-
-    /**
      * Starts the execution of tasks in this partition. This typically involves starting the
      * thread(s) that will consume and execute tasks from the partition's {@link PartitionQueue}.
      */
@@ -114,66 +107,58 @@ public interface Partition extends AutoCloseable, PartitionQueue.Callback {
         /**
          * Called when a task has successfully completed execution in this partition.
          *
-         * @param partition the partition number where the task was executed
          * @param task the {@link PartitionedRunnable} task that was completed
          */
-        default void onSuccess(int partition, PartitionedRunnable task) {
+        default void onSuccess(PartitionedRunnable task) {
         }
 
         /**
          * Called when a task execution results in an error or exception.
          *
-         * @param partition the partition number where the task was executed
          * @param task the {@link PartitionedRunnable} task that caused the error
          * @param exception the exception that occurred during execution
          */
-        default void onError(int partition, PartitionedRunnable task, Exception exception) {
+        default void onError(PartitionedRunnable task, Exception exception) {
         }
 
         /**
          * Called when the partition is interrupted during execution.
          *
-         * @param partition the partition number that was interrupted
          */
-        default void onInterrupted(int partition) {
+        default void onInterrupted() {
         }
 
         /**
          * Called when a task is rejected from execution in this partition.
          * This can happen when the queue is full or resources are unavailable.
          *
-         * @param partition the partition number where the task was rejected
          * @param task the {@link PartitionedRunnable} task that was rejected
          */
-        default void onRejected(int partition, PartitionedRunnable task) {
+        default void onRejected(PartitionedRunnable task) {
         }
 
         /**
          * Called when a task is dropped from the partition's queue. Dropped tasks may occur
          * due to queue overflow or other capacity constraints.
          *
-         * @param partition the partition number where the task was dropped
          * @param task the {@link PartitionedRunnable} task that was dropped
          */
-        default void onDropped(int partition, PartitionedRunnable task) {
+        default void onDropped(PartitionedRunnable task) {
         }
 
         /**
          * Called when a task has been successfully submitted to the partition's queue for execution.
          *
-         * @param partition the partition number where the task was submitted
          * @param task the {@link PartitionedRunnable} task that was submitted
          */
-        default void onSubmitted(int partition, PartitionedRunnable task) {
+        default void onSubmitted(PartitionedRunnable task) {
         }
 
         /**
          * Called when the partition has terminated, meaning that it has finished executing all
          * tasks and is shutting down completely.
-         *
-         * @param partition the partition number that has terminated
          */
-        default void onTerminated(int partition) {
+        default void onTerminated() {
         }
     }
 }

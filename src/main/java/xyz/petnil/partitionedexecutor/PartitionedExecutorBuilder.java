@@ -76,7 +76,7 @@ public class PartitionedExecutorBuilder {
                 threadFactory = PartitionThreadFactoryCreators.virtualThread(threadNamePrefix);
             }
 
-            return i -> new SingleThreadedPartitionWorker(i, partitionQueueCreator.create(), threadFactory.createThreadFactory(i), callback);
+            return i -> new SingleThreadedPartitionWorker(partitionQueueCreator.create(), threadFactory.createThreadFactory(i), callback);
         }
     }
 }
