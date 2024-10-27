@@ -4,20 +4,11 @@ public class PartitionedExecutors {
     private PartitionedExecutors() {
     }
 
-    public static PartitionedExecutor unboundedFifo(int maxPartitions) {
+    public static PartitionedExecutor fifo(int maxPartitions, int maxQueueSize) {
         return PartitionedExecutorBuilder.newBuilder(maxPartitions)
                 .withPartitioner(getPartitioner(maxPartitions))
                 .configurePartitionCreator()
-                .withPartitionQueueCreator(PartitionQueues::unboundedFifo)
-                .buildPartitionCreator()
-                .build();
-    }
-
-    public static PartitionedExecutor boundedFifo(int maxPartitions, int maxQueueSize) {
-        return PartitionedExecutorBuilder.newBuilder(maxPartitions)
-                .withPartitioner(getPartitioner(maxPartitions))
-                .configurePartitionCreator()
-                .withPartitionQueueCreator(() -> PartitionQueues.boundedFifo(maxQueueSize))
+                .withPartitionQueueCreator(() -> PartitionQueues.fifo(maxQueueSize))
                 .buildPartitionCreator()
                 .build();
     }

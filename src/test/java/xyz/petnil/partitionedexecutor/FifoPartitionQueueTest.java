@@ -8,13 +8,13 @@ import java.time.Duration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
-class BoundedFifoPartitionQueueTest {
+class FifoPartitionQueueTest {
 
-    private BoundedFifoPartitionQueue partitionQueue;
+    private FifoPartitionQueue partitionQueue;
 
     @BeforeEach
     void setUp() {
-        partitionQueue = new BoundedFifoPartitionQueue(3); // Queue with a capacity of 3
+        partitionQueue = new FifoPartitionQueue(3); // Queue with a capacity of 3
     }
 
     @Test

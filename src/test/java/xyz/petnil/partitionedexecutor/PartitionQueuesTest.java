@@ -10,16 +10,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PartitionQueuesTest {
 
     @Test
-    void unboundedFifo() {
-        PartitionQueue partitionQueue = PartitionQueues.unboundedFifo();
-        assertThat(partitionQueue).isInstanceOf(UnboundedFifoPartitionQueue.class);
-    }
-
-    @Test
-    void boundedFifo() {
-        PartitionQueue partitionQueue = PartitionQueues.boundedFifo(10);
-        assertThat(partitionQueue).isInstanceOf(BoundedFifoPartitionQueue.class);
-        assertThat(((BoundedFifoPartitionQueue) partitionQueue).getCapacity()).isEqualTo(10);
+    void fifo() {
+        PartitionQueue partitionQueue = PartitionQueues.fifo(10);
+        assertThat(partitionQueue).isInstanceOf(FifoPartitionQueue.class);
+        assertThat(((FifoPartitionQueue) partitionQueue).getCapacity()).isEqualTo(10);
     }
 
     @Test

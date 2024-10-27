@@ -4,21 +4,29 @@ import java.time.Duration;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-class UnboundedFifoPartitionQueue implements PartitionQueue {
+class FifoPartitionQueue implements PartitionQueue {
+    private final ArrayBlockingQueue<PartitionedRunnable> taskQueue;
+    private final int capacity;
 
-    private final LinkedBlockingQueue<PartitionedRunnable> taskQueue;
+    public FifoPartitionQueue(int capacity) {
+        if (capacity < 1) {
+            throw new IllegalArgumentException("capacity must be > 0");
+        }
+        this.capacity = capacity;
+        taskQueue = new ArrayBlockingQueue<>(capacity);
+    }
 
-    public UnboundedFifoPartitionQueue() {
-        taskQueue = new LinkedBlockingQueue<>();
+    public int getCapacity() {
+        return capacity;
     }
 
     @Override
     public boolean enqueue(PartitionedRunnable task) {
         Objects.requireNonNull(task);
-        return taskQueue.add(task);
+        return taskQueue.offer(task);
     }
 
     @Override
@@ -41,5 +49,6 @@ class UnboundedFifoPartitionQueue implements PartitionQueue {
     public int getQueueSize() {
         return taskQueue.size();
     }
+
 
 }

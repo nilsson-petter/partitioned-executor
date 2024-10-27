@@ -37,7 +37,7 @@ public class PartitionedExecutorBuilder {
         private final PartitionedExecutorBuilder parentBuilder;
         private PartitionThreadFactoryCreator threadFactory;
         private String threadNamePrefix = "SingleThreadedPartitionWorker";
-        private PartitionQueueCreator partitionQueueCreator = PartitionQueues::unboundedFifo;
+        private PartitionQueueCreator partitionQueueCreator = () -> PartitionQueues.fifo(Integer.MAX_VALUE);
         private Partition.Callback callback;
 
 

@@ -13,16 +13,6 @@ public class PartitionedExecutorExamples {
 
 
     @Test
-    void example1() throws Exception {
-        PartitionedExecutor unbounded = PartitionedExecutors.unboundedFifo(5);
-        unbounded.execute(new TestPartitionedRunnable("AAPL", 235.00));
-        unbounded.execute(new TestPartitionedRunnable("MSFT", 418.16));
-        unbounded.execute(new TestPartitionedRunnable("AAPL", 234.93));
-        unbounded.execute(new TestPartitionedRunnable("MSFT", 418.11));
-        unbounded.close();
-    }
-
-    @Test
     void example2() throws Exception {
         PartitionedExecutor sampled = PartitionedExecutors.sampled(2, o -> Duration.ofSeconds(1));
         sampled.execute(new TestPartitionedRunnable(0, 0));

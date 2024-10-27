@@ -6,12 +6,8 @@ public class PartitionQueues {
     private PartitionQueues() {
     }
 
-    public static PartitionQueue unboundedFifo() {
-        return new UnboundedFifoPartitionQueue();
-    }
-
-    public static PartitionQueue boundedFifo(int capacity) {
-        return new BoundedFifoPartitionQueue(capacity);
+    public static PartitionQueue fifo(int capacity) {
+        return new FifoPartitionQueue(capacity);
     }
 
     public static PartitionQueue sampled(SamplingFunction samplingFunction) {
