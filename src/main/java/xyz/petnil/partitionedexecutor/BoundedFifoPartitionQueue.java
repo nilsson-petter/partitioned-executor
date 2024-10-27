@@ -36,7 +36,7 @@ class BoundedFifoPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public void setOnDroppedCallback(OnDroppedCallback callback) {
+    public void setCallback(Callback callback) {
         // Not implemented
     }
 

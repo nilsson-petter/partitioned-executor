@@ -44,8 +44,8 @@ class SampledPartitionQueueTest {
         PartitionedRunnable secondTask = mock(PartitionedRunnable.class);
         when(firstTask.getPartitionKey()).thenReturn(partitionKey);
         when(secondTask.getPartitionKey()).thenReturn(partitionKey);
-        PartitionQueue.OnDroppedCallback onDroppedCallback = mock(PartitionQueue.OnDroppedCallback.class);
-        sampledPartitionQueue.setOnDroppedCallback(onDroppedCallback);
+        PartitionQueue.Callback callback = mock(PartitionQueue.Callback.class);
+        sampledPartitionQueue.setCallback(callback);
 
         // Enqueue both tasks
         sampledPartitionQueue.enqueue(firstTask);
@@ -63,7 +63,7 @@ class SampledPartitionQueueTest {
         PartitionedRunnable firstInQueue = sampledPartitionQueue.getNextTask(Duration.ofSeconds(1));
         assertEquals(secondTask, firstInQueue);
 
-        verify(onDroppedCallback, times(1)).onDropped(firstTask);
+        verify(callback, times(1)).onDropped(firstTask);
     }
 
     @Test

@@ -62,7 +62,11 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
         try {
             int partitionNumber = partitioner.getPartition(task.getPartitionKey());
             Partition partition = partitions.computeIfAbsent(partitionNumber, partitionCreator::create);
-            partition.startPartition();
+
+            if (!partition.isRunning()) {
+                partition.startPartition();
+            }
+
             partition.submitForExecution(task);
         } finally {
             mainLock.unlock();

@@ -23,7 +23,7 @@ class SampledPartitionQueue implements PartitionQueue {
     private final Map<Object, PartitionedRunnable> taskPerPartitionKeyMap;
     private final SamplingFunction samplingFunction;
 
-    private final AtomicReference<OnDroppedCallback> onDroppedCallback = new AtomicReference<>();
+    private final AtomicReference<Callback> onDroppedCallback = new AtomicReference<>();
 
     public SampledPartitionQueue(SamplingFunction samplingFunction) {
         this.samplingFunction = Objects.requireNonNull(samplingFunction);
@@ -73,12 +73,12 @@ class SampledPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public void setOnDroppedCallback(OnDroppedCallback callback) {
+    public void setCallback(Callback callback) {
         onDroppedCallback.set(callback);
     }
 
     private void onDropped(PartitionedRunnable task) {
-        OnDroppedCallback od = onDroppedCallback.get();
+        Callback od = onDroppedCallback.get();
         if (od != null) {
             od.onDropped(task);
         }

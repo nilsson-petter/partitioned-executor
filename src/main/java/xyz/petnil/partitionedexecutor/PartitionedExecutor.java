@@ -87,5 +87,7 @@ public interface PartitionedExecutor extends AutoCloseable {
         }
     }
 
-    // TODO: Add callback on this level also?
+    interface Callback extends Partition.Callback {
+
+    }
 }

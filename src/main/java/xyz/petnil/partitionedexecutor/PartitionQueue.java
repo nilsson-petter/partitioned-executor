@@ -62,16 +62,16 @@ public interface PartitionQueue {
      * (e.g., due to sampling behaviour). The callback will be called
      * with the task that was dropped.
      *
-     * @param callback the {@link OnDroppedCallback} to be invoked when tasks are dropped
+     * @param callback the {@link Callback} to be invoked when tasks are dropped
      */
-    void setOnDroppedCallback(OnDroppedCallback callback);
+    void setCallback(Callback callback);
 
     /**
-     * The {@code OnDroppedCallback} interface defines a callback to handle situations
+     * The {@code Callback} interface defines a callback to handle situations
      * where a task is dropped from the queue. This can be useful for handling cases
-     * where tasks are superseded by e.g. sampling behaviour.
+     * where tasks are superseded by e.g. debouncing behaviour.
      */
-    interface OnDroppedCallback {
+    interface Callback {
         /**
          * Called when a {@link PartitionedRunnable} task is dropped from the queue.
          *

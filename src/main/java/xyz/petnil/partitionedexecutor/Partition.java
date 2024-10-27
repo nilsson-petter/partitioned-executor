@@ -16,14 +16,14 @@ import java.util.Queue;
  * gracefully. If a partition is unable to complete within a specified timeout during shutdown,
  * any remaining tasks can be forcibly retrieved.
  *
- * <p>This interface extends {@link PartitionQueue.OnDroppedCallback} to ensure callbacks get propagated
+ * <p>This interface extends {@link PartitionQueue.Callback} to ensure callbacks get propagated
  * to {@link Callback}.
  *
  * @see PartitionQueue
  * @see PartitionedRunnable
  * @see PartitionedExecutor
  */
-public interface Partition extends AutoCloseable, PartitionQueue.OnDroppedCallback {
+public interface Partition extends AutoCloseable, PartitionQueue.Callback {
 
     /**
      * Returns the unique number assigned to this partition.
@@ -54,6 +54,10 @@ public interface Partition extends AutoCloseable, PartitionQueue.OnDroppedCallba
      * @param task the partitioned task to be executed, must not be null
      */
     void submitForExecution(PartitionedRunnable task);
+
+    boolean isRunning();
+
+    boolean isShutdownInProgress();
 
     /**
      * Initiates the shutdown of this partition. The partition will stop accepting new tasks

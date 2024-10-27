@@ -9,9 +9,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDroppedCallback {
+class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callback {
     private final Lock mainLock = new ReentrantLock();
-    private final AtomicBoolean interrupted = new AtomicBoolean(false);
+    private final AtomicBoolean isShutdownSignaled = new AtomicBoolean(false);
+    private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private final int partitionNumber;
     private final PartitionQueue partitionQueue;
     private final ThreadFactory threadFactory;
@@ -27,7 +28,7 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDropp
     ) {
         this.partitionNumber = partitionNumber;
         this.partitionQueue = Objects.requireNonNull(partitionQueue);
-        this.partitionQueue.setOnDroppedCallback(this);
+        this.partitionQueue.setCallback(this);
         this.threadFactory = Objects.requireNonNull(threadFactory);
         this.callback = new AtomicReference<>(callback);
     }
@@ -39,17 +40,15 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDropp
 
     @Override
     public void startPartition() {
-        interrupted.set(false);
         mainLock.lock();
         try {
-            if (thread == null || !thread.isAlive()) {
+            if (isRunning.compareAndSet(false, true)) {
                 thread = threadFactory.newThread(this::pollAndProcess);
                 thread.start();
             }
         } finally {
             mainLock.unlock();
         }
-
     }
 
     @Override
@@ -60,7 +59,7 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDropp
     @Override
     public void submitForExecution(PartitionedRunnable task) {
         Objects.requireNonNull(task);
-        if (interrupted.get() || !partitionQueue.enqueue(task)) {
+        if (isShutdownSignaled.get() || !partitionQueue.enqueue(task)) {
             onRejected(task);
         } else {
             onSubmitted(task);
@@ -69,10 +68,11 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDropp
 
 
     private void pollAndProcess() {
+        isRunning.set(true);
         while (true) {
             try {
                 PartitionedRunnable nextTask = partitionQueue.getNextTask(Duration.ofSeconds(5));
-                if (interrupted.get() && nextTask == null) {
+                if (isShutdownSignaled.get() && nextTask == null) {
                     break;
                 }
 
@@ -83,6 +83,7 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDropp
                 Thread.currentThread().interrupt();
             }
         }
+        isRunning.set(false);
     }
 
     private void safeGuardedRun(PartitionedRunnable task) {
@@ -95,17 +96,32 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.OnDropp
     }
 
     @Override
+    public boolean isRunning() {
+        return isRunning.get();
+    }
+
+    @Override
+    public boolean isShutdownInProgress() {
+        return isShutdownSignaled.get();
+    }
+
+    @Override
     public void initiateShutdown() {
-        interrupted.set(true);
+        isShutdownSignaled.set(true);
     }
 
     @Override
     public boolean awaitTaskCompletion(Duration duration) throws InterruptedException {
         Objects.requireNonNull(duration);
-        if (thread != null) {
-            return thread.join(duration);
+        mainLock.lock();
+        try {
+            if (thread != null) {
+                return thread.join(duration);
+            }
+            return true;
+        } finally {
+            mainLock.unlock();
         }
-        return true;
     }
 
     @Override
