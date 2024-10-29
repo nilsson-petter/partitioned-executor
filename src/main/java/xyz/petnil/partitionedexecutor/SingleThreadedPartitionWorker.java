@@ -3,11 +3,13 @@ package xyz.petnil.partitionedexecutor;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callback {
     private final Lock mainLock = new ReentrantLock();
@@ -15,19 +17,17 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private final PartitionQueue partitionQueue;
     private final ThreadFactory threadFactory;
-    private final AtomicReference<Callback> callback;
+    private final Set<Callback> callbacks = ConcurrentHashMap.newKeySet();
 
     private Thread thread;
 
     public SingleThreadedPartitionWorker(
             PartitionQueue partitionQueue,
-            ThreadFactory threadFactory,
-            Callback callback
+            ThreadFactory threadFactory
     ) {
         this.partitionQueue = Objects.requireNonNull(partitionQueue);
         this.partitionQueue.addCallback(this);
         this.threadFactory = Objects.requireNonNull(threadFactory);
-        this.callback = new AtomicReference<>(callback);
     }
 
     @Override
@@ -128,44 +128,40 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     }
 
     @Override
-    public void setCallback(Callback callback) {
-        this.callback.set(callback);
+    public void addCallback(Callback callback) {
+        callbacks.add(callback);
+    }
+
+    @Override
+    public void removeCallback(Callback callback) {
+        callbacks.remove(callback);
+    }
+
+    private void callback(Consumer<Callback> consumer) {
+        callbacks.forEach(consumer);
     }
 
     private void onSubmitted(PartitionedRunnable task) {
-        Callback cb = callback.get();
-        if (cb != null) {
-            cb.onSubmitted(task);
-        }
+        callback(c -> c.onSubmitted(task));
     }
 
+
     private void onSuccess(PartitionedRunnable task) {
-        Callback cb = callback.get();
-        if (cb != null) {
-            cb.onSuccess(task);
-        }
+        callback(c -> c.onSuccess(task));
     }
 
     private void onError(PartitionedRunnable task, Exception e) {
-        Callback cb = callback.get();
-        if (cb != null) {
-            cb.onError(task, e);
-        }
+        callback(c -> c.onError(task, e));
+
     }
 
     private void onRejected(PartitionedRunnable task) {
-        Callback cb = callback.get();
-        if (cb != null) {
-            cb.onRejected(task);
-        }
+        callback(c -> c.onRejected(task));
     }
 
     @Override
     public void onDropped(PartitionedRunnable task) {
-        Callback cb = callback.get();
-        if (cb != null) {
-            cb.onDropped(task);
-        }
+        callback(c -> c.onDropped(task));
     }
 
 }

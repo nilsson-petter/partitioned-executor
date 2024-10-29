@@ -45,6 +45,8 @@ public interface Partition extends AutoCloseable, PartitionQueue.Callback {
      * by the partition when resources are available.
      *
      * @param task the partitioned task to be executed, must not be null
+     * @throws NullPointerException if the task is null.
+
      */
     void submitForExecution(PartitionedRunnable task);
 
@@ -77,12 +79,21 @@ public interface Partition extends AutoCloseable, PartitionQueue.Callback {
     Queue<PartitionedRunnable> forceShutdownAndGetPending();
 
     /**
-     * Sets a {@link Callback} to handle various partition-level events, such as task submission,
+     * Adds a {@link Callback} to handle various partition-level events, such as task submission,
      * completion, errors, and shutdown events.
      *
-     * @param callback the {@link Callback} instance to receive event notifications
+     * @param callback the {@link Callback} to be added
+     * @throws NullPointerException if the {@link Callback} is null
      */
-    void setCallback(Callback callback);
+    void addCallback(Callback callback);
+
+    /**
+     * Removes the provided {@link Callback}.
+     *
+     * @param callback the {@link Callback} to be added
+     * @throws NullPointerException if the {@link Callback} is null.
+     */
+    void removeCallback(Callback callback);
 
     /**
      * Initiates the shutdown of the partition and attempts to await task completion.
@@ -115,7 +126,7 @@ public interface Partition extends AutoCloseable, PartitionQueue.Callback {
         /**
          * Called when a task execution results in an error or exception.
          *
-         * @param task the {@link PartitionedRunnable} task that caused the error
+         * @param task      the {@link PartitionedRunnable} task that caused the error
          * @param exception the exception that occurred during execution
          */
         default void onError(PartitionedRunnable task, Exception exception) {
@@ -123,7 +134,6 @@ public interface Partition extends AutoCloseable, PartitionQueue.Callback {
 
         /**
          * Called when the partition is interrupted during execution.
-         *
          */
         default void onInterrupted() {
         }

@@ -38,7 +38,6 @@ public class PartitionedExecutorBuilder {
         private PartitionThreadFactoryCreator threadFactory;
         private String threadNamePrefix = "SingleThreadedPartitionWorker";
         private PartitionQueueCreator partitionQueueCreator = () -> PartitionQueues.fifo(Integer.MAX_VALUE);
-        private Partition.Callback callback;
 
 
         private PartitionCreatorBuilder(PartitionedExecutorBuilder parentBuilder) {
@@ -52,11 +51,6 @@ public class PartitionedExecutorBuilder {
 
         public PartitionCreatorBuilder withThreadNamePrefix(String threadNamePrefix) {
             this.threadNamePrefix = threadNamePrefix;
-            return this;
-        }
-
-        public PartitionCreatorBuilder withCallback(Partition.Callback callback) {
-            this.callback = callback;
             return this;
         }
 
@@ -76,7 +70,7 @@ public class PartitionedExecutorBuilder {
                 threadFactory = PartitionThreadFactoryCreators.virtualThread(threadNamePrefix);
             }
 
-            return i -> new SingleThreadedPartitionWorker(partitionQueueCreator.create(), threadFactory.createThreadFactory(i), callback);
+            return i -> new SingleThreadedPartitionWorker(partitionQueueCreator.create(), threadFactory.createThreadFactory(i));
         }
     }
 }
