@@ -36,11 +36,6 @@ class FifoPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public void setCallback(Callback callback) {
-        // Not implemented
-    }
-
-    @Override
     public Queue<PartitionedRunnable> getQueue() {
         return new LinkedList<>(taskQueue);
     }
@@ -48,6 +43,16 @@ class FifoPartitionQueue implements PartitionQueue {
     @Override
     public int getQueueSize() {
         return taskQueue.size();
+    }
+
+    @Override
+    public void removeCallback(Callback callback) {
+        // Not implemented
+    }
+
+    @Override
+    public void addCallback(Callback callback) {
+        // Not implemented
     }
 
 

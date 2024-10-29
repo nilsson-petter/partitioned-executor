@@ -45,7 +45,7 @@ class TrailingThrottledPartitionQueueTest {
         when(firstTask.getPartitionKey()).thenReturn(partitionKey);
         when(secondTask.getPartitionKey()).thenReturn(partitionKey);
         PartitionQueue.Callback callback = mock(PartitionQueue.Callback.class);
-        trailingThrottledPartitionQueue.setCallback(callback);
+        trailingThrottledPartitionQueue.addCallback(callback);
 
         // Enqueue both tasks
         trailingThrottledPartitionQueue.enqueue(firstTask);

@@ -58,13 +58,21 @@ public interface PartitionQueue {
     int getQueueSize();
 
     /**
-     * Sets a callback to be invoked when tasks are dropped from the queue
+     * Removes the provided callback. Has no effect if the {@link Callback}
+     * is not registered.
+     *
+     * @param callback the {@link Callback} to be removed.
+     */
+    void removeCallback(Callback callback);
+
+    /**
+     * Adds a callback to be invoked when tasks are dropped from the queue
      * (e.g., due to throttling). The callback will be called
      * with the task that was dropped.
      *
-     * @param callback the {@link Callback} to be invoked when tasks are dropped
+     * @param callback the {@link Callback} to be added.
      */
-    void setCallback(Callback callback);
+    void addCallback(Callback callback);
 
     /**
      * The {@code Callback} interface defines a callback to handle situations

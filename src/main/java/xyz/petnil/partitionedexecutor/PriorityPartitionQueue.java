@@ -40,7 +40,12 @@ class PriorityPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public void setCallback(Callback callback) {
+    public void removeCallback(Callback callback) {
+        // Not implemented
+    }
+
+    @Override
+    public void addCallback(Callback callback) {
         // Not implemented
     }
 

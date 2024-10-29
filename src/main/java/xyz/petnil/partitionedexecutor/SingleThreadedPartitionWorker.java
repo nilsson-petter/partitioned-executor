@@ -25,7 +25,7 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
             Callback callback
     ) {
         this.partitionQueue = Objects.requireNonNull(partitionQueue);
-        this.partitionQueue.setCallback(this);
+        this.partitionQueue.addCallback(this);
         this.threadFactory = Objects.requireNonNull(threadFactory);
         this.callback = new AtomicReference<>(callback);
     }

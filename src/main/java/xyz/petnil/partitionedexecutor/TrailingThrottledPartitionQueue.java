@@ -8,11 +8,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -23,7 +24,7 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
     private final Map<Object, PartitionedRunnable> taskPerPartitionKeyMap;
     private final ThrottlingFunction throttlingFunction;
 
-    private final AtomicReference<Callback> onDroppedCallback = new AtomicReference<>();
+    private final Set<Callback> onDroppedCallback = ConcurrentHashMap.newKeySet();
 
     public TrailingThrottledPartitionQueue(ThrottlingFunction throttlingFunction) {
         this.throttlingFunction = Objects.requireNonNull(throttlingFunction);
@@ -72,16 +73,8 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
         }
     }
 
-    @Override
-    public void setCallback(Callback callback) {
-        onDroppedCallback.set(callback);
-    }
-
     private void onDropped(PartitionedRunnable task) {
-        Callback od = onDroppedCallback.get();
-        if (od != null) {
-            od.onDropped(task);
-        }
+        onDroppedCallback.forEach(c -> c.onDropped(task));
     }
 
     @Override
@@ -100,6 +93,18 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
     @Override
     public int getQueueSize() {
         return partitionKeyQueue.size();
+    }
+
+    @Override
+    public void removeCallback(Callback callback) {
+        Objects.requireNonNull(callback);
+        onDroppedCallback.remove(callback);
+    }
+
+    @Override
+    public void addCallback(Callback callback) {
+        Objects.requireNonNull(callback);
+        onDroppedCallback.add(callback);
     }
 
     private static class DelayedObject implements Delayed {
