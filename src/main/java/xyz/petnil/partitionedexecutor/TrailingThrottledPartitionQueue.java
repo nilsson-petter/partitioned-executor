@@ -1,10 +1,8 @@
 package xyz.petnil.partitionedexecutor;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
@@ -18,18 +16,16 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 class TrailingThrottledPartitionQueue implements PartitionQueue {
-    private final Lock mainLock = new ReentrantLock();
+    private final Lock mapLock = new ReentrantLock();
 
-    private final BlockingQueue<DelayedObject> partitionKeyQueue;
-    private final Map<Object, PartitionedRunnable> taskPerPartitionKeyMap;
+    private final BlockingQueue<DelayedObject> partitionKeyQueue = new DelayQueue<>();
+    private final Map<Object, PartitionedRunnable> taskPerPartitionKeyMap = new HashMap<>();
     private final ThrottlingFunction throttlingFunction;
 
     private final Set<Callback> callbacks = ConcurrentHashMap.newKeySet();
 
     public TrailingThrottledPartitionQueue(ThrottlingFunction throttlingFunction) {
         this.throttlingFunction = Objects.requireNonNull(throttlingFunction);
-        this.partitionKeyQueue = new DelayQueue<>();
-        this.taskPerPartitionKeyMap = new HashMap<>();
     }
 
     public ThrottlingFunction getThrottlingFunction() {
@@ -43,33 +39,38 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
     @Override
     public boolean enqueue(PartitionedRunnable task) {
         Objects.requireNonNull(task);
+        Object partitionKey = task.getPartitionKey();
+
+        mapLock.lock();
         try {
-            Object partitionKey = task.getPartitionKey();
-            mainLock.lock();
             PartitionedRunnable previousTask = taskPerPartitionKeyMap.put(partitionKey, task);
-            if (previousTask == null) {
-                return partitionKeyQueue.add(new DelayedObject(partitionKey, throttlingFunction.getThrottlingInterval(partitionKey).toMillis()));
-            } else {
+            if (previousTask != null) {
                 onDropped(previousTask);
+                return true;
             }
-            return true;
         } finally {
-            mainLock.unlock();
+            mapLock.unlock();
         }
+
+        return partitionKeyQueue.add(
+                new DelayedObject(partitionKey, throttlingFunction.getThrottlingInterval(partitionKey).toMillis())
+        );
+
     }
 
     @Override
     public PartitionedRunnable getNextTask(Duration duration) throws InterruptedException {
-        Objects.requireNonNull(duration);
-        try {
-            mainLock.lock();
-            DelayedObject delayedPartitionKey = partitionKeyQueue.poll(duration.toMillis(), TimeUnit.MILLISECONDS);
-            if (delayedPartitionKey != null) {
-                return taskPerPartitionKeyMap.remove(delayedPartitionKey.getObject());
-            }
+        DelayedObject delayedPartitionKey = partitionKeyQueue.poll(duration.toMillis(), TimeUnit.MILLISECONDS);
+
+        if (delayedPartitionKey == null) {
             return null;
+        }
+
+        mapLock.lock();
+        try {
+            return taskPerPartitionKeyMap.remove(delayedPartitionKey.getObject());
         } finally {
-            mainLock.unlock();
+            mapLock.unlock();
         }
     }
 
@@ -79,15 +80,21 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
 
     @Override
     public Queue<PartitionedRunnable> getQueue() {
-        mainLock.lock();
+        Queue<PartitionedRunnable> snapshotQueue = new LinkedList<>();
+
+        mapLock.lock();
         try {
-            Queue<PartitionedRunnable> queue = new LinkedList<>();
-            List<DelayedObject> delayedObjects = new ArrayList<>(partitionKeyQueue);
-            delayedObjects.forEach(d -> queue.add(taskPerPartitionKeyMap.get(d.object)));
-            return queue;
+            for (DelayedObject d : partitionKeyQueue) {
+                PartitionedRunnable task = taskPerPartitionKeyMap.get(d.getObject());
+                if (task != null) {
+                    snapshotQueue.add(task);
+                }
+            }
         } finally {
-            mainLock.unlock();
+            mapLock.unlock();
         }
+
+        return snapshotQueue;
     }
 
     @Override
