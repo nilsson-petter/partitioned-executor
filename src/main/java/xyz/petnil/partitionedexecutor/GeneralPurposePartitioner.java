@@ -2,6 +2,15 @@ package xyz.petnil.partitionedexecutor;
 
 import java.util.Objects;
 
+/**
+ * A general purpose partitioner that partitions tasks based on their hashCode.
+ * <p>
+ * This partitioner is useful when the partition key is an arbitrary object, and no specific
+ * partitioning is required.
+ * <p>
+ * This partitioner is thread safe.
+ * <p>
+ */
 class GeneralPurposePartitioner implements Partitioner {
 
     private final int maxPartitions;
