@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -18,6 +19,7 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     private final PartitionQueue partitionQueue;
     private final ThreadFactory threadFactory;
     private final Set<Callback> callbacks = ConcurrentHashMap.newKeySet();
+    private final AtomicReference<State> state = new AtomicReference<>(State.NEW);
 
     private Thread thread;
 
@@ -34,7 +36,7 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     public void startPartition() {
         mainLock.lock();
         try {
-            if (isRunning.compareAndSet(false, true)) {
+            if (state.compareAndSet(State.NEW, State.RUNNING)) {
                 thread = threadFactory.newThread(this::pollAndProcess);
                 thread.start();
             }
@@ -60,7 +62,6 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
 
 
     private void pollAndProcess() {
-        isRunning.set(true);
         while (true) {
             try {
                 PartitionedRunnable nextTask = partitionQueue.getNextTask(Duration.ofSeconds(5));
@@ -75,7 +76,7 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
                 Thread.currentThread().interrupt();
             }
         }
-        isRunning.set(false);
+        state.set(State.TERMINATED);
     }
 
     private void safeGuardedRun(PartitionedRunnable task) {
@@ -89,17 +90,27 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
 
     @Override
     public boolean isRunning() {
-        return isRunning.get();
+        return state.get() == State.RUNNING;
     }
 
     @Override
     public boolean isShutdownInProgress() {
-        return isShutdownSignaled.get();
+        return state.get() == State.SHUTDOWN;
+    }
+
+    @Override
+    public boolean isTerminated() {
+        return state.get() == State.TERMINATED;
     }
 
     @Override
     public void initiateShutdown() {
-        isShutdownSignaled.set(true);
+        mainLock.lock();
+        try {
+            state.compareAndSet(State.RUNNING, State.SHUTDOWN);
+        } finally {
+            mainLock.unlock();
+        }
     }
 
     @Override
@@ -118,11 +129,13 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
 
     @Override
     public Queue<PartitionedRunnable> forceShutdownAndGetPending() {
+        initiateShutdown();
         mainLock.lock();
         try {
             thread.interrupt();
             return partitionQueue.getQueue();
         } finally {
+            state.compareAndSet(State.SHUTDOWN, State.TERMINATED);
             mainLock.unlock();
         }
     }
@@ -162,6 +175,13 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     @Override
     public void onDropped(PartitionedRunnable task) {
         callback(c -> c.onDropped(task));
+    }
+
+    private enum State {
+        NEW,
+        RUNNING,
+        SHUTDOWN,
+        TERMINATED
     }
 
 }

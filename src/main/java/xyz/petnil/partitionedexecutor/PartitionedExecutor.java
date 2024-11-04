@@ -87,7 +87,11 @@ public interface PartitionedExecutor extends AutoCloseable {
         }
     }
 
-    interface Callback extends Partition.Callback {
+    boolean isShutdown();
+
+    boolean isTerminated();
+
+    interface Callback {
 
     }
 }

@@ -54,6 +54,8 @@ public interface Partition extends AutoCloseable, PartitionQueue.Callback {
 
     boolean isShutdownInProgress();
 
+    boolean isTerminated();
+
     /**
      * Initiates the shutdown of this partition. The partition will stop accepting new tasks
      * and will begin the process of completing any tasks already in the queue.
