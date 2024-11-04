@@ -24,7 +24,7 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
     private final Map<Object, PartitionedRunnable> taskPerPartitionKeyMap;
     private final ThrottlingFunction throttlingFunction;
 
-    private final Set<Callback> onDroppedCallback = ConcurrentHashMap.newKeySet();
+    private final Set<Callback> callbacks = ConcurrentHashMap.newKeySet();
 
     public TrailingThrottledPartitionQueue(ThrottlingFunction throttlingFunction) {
         this.throttlingFunction = Objects.requireNonNull(throttlingFunction);
@@ -74,7 +74,7 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
     }
 
     private void onDropped(PartitionedRunnable task) {
-        onDroppedCallback.forEach(c -> c.onDropped(task));
+        callbacks.forEach(c -> c.onDropped(task));
     }
 
     @Override
@@ -98,13 +98,13 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
     @Override
     public void removeCallback(Callback callback) {
         Objects.requireNonNull(callback);
-        onDroppedCallback.remove(callback);
+        callbacks.remove(callback);
     }
 
     @Override
     public void addCallback(Callback callback) {
         Objects.requireNonNull(callback);
-        onDroppedCallback.add(callback);
+        callbacks.add(callback);
     }
 
     private static class DelayedObject implements Delayed {
