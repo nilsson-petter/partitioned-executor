@@ -76,7 +76,7 @@ class SingleThreadedPartitionWorkerTest {
 
     @Test
     void testPollAndProcessSuccess() throws InterruptedException {
-        when(mockQueue.getNextTask(any())).thenReturn(mockTask, null);
+        when(mockQueue.getNextTask(any())).thenReturn(mockTask, (PartitionedRunnable) null);
 
         worker.start();
 
@@ -115,7 +115,7 @@ class SingleThreadedPartitionWorkerTest {
     @Test
     void testCallbackOnError() throws InterruptedException {
         doThrow(new RuntimeException("Task failed")).when(mockTask).run();
-        when(mockQueue.getNextTask(any())).thenReturn(mockTask, null);
+        when(mockQueue.getNextTask(any())).thenReturn(mockTask, (PartitionedRunnable) null);
         worker.start();
         verify(mockCallback, timeout(1000)).onError(eq(mockTask), any(RuntimeException.class));
     }
