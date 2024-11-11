@@ -13,6 +13,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 class TrailingThrottledPartitionQueueTest {
@@ -111,5 +112,28 @@ class TrailingThrottledPartitionQueueTest {
         // Assert
         assertThat(trailingThrottledPartitionQueue.getQueueSize()).isEqualTo(10);
         assertThat(trailingThrottledPartitionQueue.getQueue()).hasSize(10).containsSequence(expectedList);
+    }
+
+    @Test
+    void removeCallback() {
+        String partitionKey = "TSLA";
+        var firstTask = mock(PartitionedRunnable.class);
+        var secondTask = mock(PartitionedRunnable.class);
+        var thirdTask = mock(PartitionedRunnable.class);
+        when(firstTask.getPartitionKey()).thenReturn(partitionKey);
+        when(secondTask.getPartitionKey()).thenReturn(partitionKey);
+        when(thirdTask.getPartitionKey()).thenReturn(partitionKey);
+
+        PartitionQueue.Callback callback = mock(PartitionQueue.Callback.class);
+        trailingThrottledPartitionQueue.addCallback(callback);
+
+        trailingThrottledPartitionQueue.enqueue(firstTask);
+        trailingThrottledPartitionQueue.enqueue(secondTask);
+        verify(callback, times(1)).onDropped(firstTask);
+
+        trailingThrottledPartitionQueue.removeCallback(callback);
+        trailingThrottledPartitionQueue.enqueue(thirdTask);
+
+        verifyNoMoreInteractions(callback);
     }
 }
