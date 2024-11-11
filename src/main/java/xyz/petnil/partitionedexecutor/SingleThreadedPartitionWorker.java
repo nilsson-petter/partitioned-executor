@@ -6,16 +6,13 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callback {
+class SingleThreadedPartitionWorker implements Partition {
     private final Lock mainLock = new ReentrantLock();
-    private final AtomicBoolean isShutdownSignaled = new AtomicBoolean(false);
-    private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private final PartitionQueue partitionQueue;
     private final ThreadFactory threadFactory;
     private final Set<Callback> callbacks = ConcurrentHashMap.newKeySet();
@@ -28,18 +25,26 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
             ThreadFactory threadFactory
     ) {
         this.partitionQueue = Objects.requireNonNull(partitionQueue);
-        this.partitionQueue.addCallback(this);
+        this.partitionQueue.addCallback(new PartitionQueueCallback());
         this.threadFactory = Objects.requireNonNull(threadFactory);
     }
 
+    /**
+     * Starts the processing thread if the current state is NEW.
+     * <p>
+     * This method acquires a lock to ensure thread safety while checking and updating the state.
+     * If the state is successfully changed from NEW to RUNNING, a new thread is created using the
+     * specified thread factory and starts executing the pollAndProcess method.
+     */
     @Override
-    public void startPartition() {
+    public void start() {
         mainLock.lock();
         try {
-            if (state.compareAndSet(State.NEW, State.RUNNING)) {
+            computeState(State.NEW, State.RUNNING, () -> {
                 thread = threadFactory.newThread(this::pollAndProcess);
                 thread.start();
-            }
+                onStarted();
+            });
         } finally {
             mainLock.unlock();
         }
@@ -53,7 +58,8 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     @Override
     public void submitForExecution(PartitionedRunnable task) {
         Objects.requireNonNull(task);
-        if (isShutdownSignaled.get() || !partitionQueue.enqueue(task)) {
+        State s = state.get();
+        if (s == State.SHUTDOWN || s == State.TERMINATED || !partitionQueue.enqueue(task)) {
             onRejected(task);
         } else {
             onSubmitted(task);
@@ -65,7 +71,8 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
         while (true) {
             try {
                 PartitionedRunnable nextTask = partitionQueue.getNextTask(Duration.ofSeconds(5));
-                if (isShutdownSignaled.get() && nextTask == null) {
+                State s = state.get();
+                if ((s == State.SHUTDOWN || s == State.TERMINATED) && nextTask == null) {
                     break;
                 }
 
@@ -73,10 +80,13 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
                     safeGuardedRun(nextTask);
                 }
             } catch (InterruptedException e) {
+                setState(State.TERMINATED, this::onInterrupted);
                 Thread.currentThread().interrupt();
+                break;
             }
         }
-        state.set(State.TERMINATED);
+
+        setState(State.TERMINATED, this::onTerminated);
     }
 
     private void safeGuardedRun(PartitionedRunnable task) {
@@ -89,13 +99,8 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     }
 
     @Override
-    public boolean isRunning() {
-        return state.get() == State.RUNNING;
-    }
-
-    @Override
-    public boolean isShutdownInProgress() {
-        return state.get() == State.SHUTDOWN;
+    public boolean isShutdown() {
+        return state.get() == State.SHUTDOWN || state.get() == State.TERMINATED;
     }
 
     @Override
@@ -104,17 +109,19 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     }
 
     @Override
-    public void initiateShutdown() {
+    public void shutdown() {
         mainLock.lock();
         try {
-            state.compareAndSet(State.RUNNING, State.SHUTDOWN);
+            if (state.compareAndSet(State.NEW, State.SHUTDOWN) || state.compareAndSet(State.RUNNING, State.SHUTDOWN)) {
+                onShutdown();
+            }
         } finally {
             mainLock.unlock();
         }
     }
 
     @Override
-    public boolean awaitTaskCompletion(Duration duration) throws InterruptedException {
+    public boolean awaitTermination(Duration duration) throws InterruptedException {
         Objects.requireNonNull(duration);
         mainLock.lock();
         try {
@@ -128,15 +135,27 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
     }
 
     @Override
-    public Queue<PartitionedRunnable> forceShutdownAndGetPending() {
-        initiateShutdown();
+    public Queue<PartitionedRunnable> shutdownNow() {
+        shutdown();
         mainLock.lock();
         try {
             thread.interrupt();
             return partitionQueue.getQueue();
         } finally {
-            state.compareAndSet(State.SHUTDOWN, State.TERMINATED);
+            computeState(State.SHUTDOWN, State.TERMINATED, this::onTerminated);
             mainLock.unlock();
+        }
+    }
+
+    private void setState(State newState, Runnable postStateTask) {
+        state.set(newState);
+        postStateTask.run();
+    }
+
+
+    private void computeState(State expectedState, State newState, Runnable postStateTask) {
+        if (state.compareAndSet(expectedState, newState)) {
+            postStateTask.run();
         }
     }
 
@@ -172,9 +191,20 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
         callback(c -> c.onRejected(task));
     }
 
-    @Override
-    public void onDropped(PartitionedRunnable task) {
-        callback(c -> c.onDropped(task));
+    private void onInterrupted() {
+        callback(Callback::onInterrupted);
+    }
+
+    private void onTerminated() {
+        callback(Callback::onTerminated);
+    }
+
+    private void onStarted() {
+        callback(Callback::onStarted);
+    }
+
+    private void onShutdown() {
+        callback(Callback::onShutdown);
     }
 
     private enum State {
@@ -182,6 +212,14 @@ class SingleThreadedPartitionWorker implements Partition, PartitionQueue.Callbac
         RUNNING,
         SHUTDOWN,
         TERMINATED
+    }
+
+    private class PartitionQueueCallback implements PartitionQueue.Callback {
+
+        @Override
+        public void onDropped(PartitionedRunnable task) {
+            callback(c -> c.onDropped(task));
+        }
     }
 
 }

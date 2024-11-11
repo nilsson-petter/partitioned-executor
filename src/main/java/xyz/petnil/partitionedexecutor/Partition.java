@@ -16,20 +16,18 @@ import java.util.Queue;
  * gracefully. If a partition is unable to complete within a specified timeout during shutdown,
  * any remaining tasks can be forcibly retrieved.
  *
- * <p>This interface extends {@link PartitionQueue.Callback} to ensure callbacks get propagated
- * to {@link Callback}.
- *
  * @see PartitionQueue
  * @see PartitionedRunnable
  * @see PartitionedExecutor
  */
-public interface Partition extends AutoCloseable, PartitionQueue.Callback {
+public interface Partition extends AutoCloseable {
 
     /**
      * Starts the execution of tasks in this partition. This typically involves starting the
      * thread(s) that will consume and execute tasks from the partition's {@link PartitionQueue}.
+     * Has no effect on already started partition.
      */
-    void startPartition();
+    void start();
 
     /**
      * Returns the {@link PartitionQueue} associated with this partition.
@@ -46,21 +44,30 @@ public interface Partition extends AutoCloseable, PartitionQueue.Callback {
      *
      * @param task the partitioned task to be executed, must not be null
      * @throws NullPointerException if the task is null.
-
      */
     void submitForExecution(PartitionedRunnable task);
 
-    boolean isRunning();
 
-    boolean isShutdownInProgress();
+    /**
+     * Indicates whether this partition has been shutdown.
+     * Will return true if shutdown is in progress or if shutdown is complete.
+     *
+     * @return true if the partition has been shutdown, otherwise false.
+     */
+    boolean isShutdown();
 
+    /**
+     * Indicates whether this partition has been terminated.
+     *
+     * @return true if the partition has been terminated, otherwise false.
+     */
     boolean isTerminated();
 
     /**
-     * Initiates the shutdown of this partition. The partition will stop accepting new tasks
-     * and will begin the process of completing any tasks already in the queue.
+     * Initiates the shutdown of this partition. The partition will stop accepting new tasks,
+     * but will continue processing of completing any tasks already in the queue.
      */
-    void initiateShutdown();
+    void shutdown();
 
     /**
      * Waits for all tasks in the partition to complete execution, or until the specified
@@ -70,7 +77,7 @@ public interface Partition extends AutoCloseable, PartitionQueue.Callback {
      * @return {@code true} if all tasks completed, {@code false} if the timeout elapsed before completion
      * @throws InterruptedException if the current thread is interrupted while waiting
      */
-    boolean awaitTaskCompletion(Duration duration) throws InterruptedException;
+    boolean awaitTermination(Duration duration) throws InterruptedException;
 
     /**
      * Forces the shutdown of the partition and retrieves any pending tasks that have not yet been executed.
@@ -78,7 +85,7 @@ public interface Partition extends AutoCloseable, PartitionQueue.Callback {
      *
      * @return a {@link Queue} of {@link PartitionedRunnable} tasks that were pending at the time of shutdown
      */
-    Queue<PartitionedRunnable> forceShutdownAndGetPending();
+    Queue<PartitionedRunnable> shutdownNow();
 
     /**
      * Adds a {@link Callback} to handle various partition-level events, such as task submission,
@@ -105,9 +112,9 @@ public interface Partition extends AutoCloseable, PartitionQueue.Callback {
      */
     @Override
     default void close() throws Exception {
-        initiateShutdown();
-        if (!awaitTaskCompletion(Duration.ofMinutes(30))) {
-            forceShutdownAndGetPending();
+        shutdown();
+        if (!awaitTermination(Duration.ofMinutes(30))) {
+            shutdownNow();
         }
     }
 
@@ -116,6 +123,26 @@ public interface Partition extends AutoCloseable, PartitionQueue.Callback {
      * such as task success, failure, rejection, and shutdown.
      */
     interface Callback {
+
+        /**
+         * Called when the partition has been started, meaning that it has begun executing tasks.
+         */
+        default void onStarted() {
+        }
+
+        /**
+         * Called when {@link Partition#shutdown()} has been invoked, meaning that it will no longer
+         * accept new tasks.
+         */
+        default void onShutdown() {
+        }
+
+        /**
+         * Called when the partition has terminated, meaning that it has finished executing all
+         * tasks (either forcefully or gracefully) and is shutting down completely.
+         */
+        default void onTerminated() {
+        }
 
         /**
          * Called when a task has successfully completed execution in this partition.
@@ -164,13 +191,6 @@ public interface Partition extends AutoCloseable, PartitionQueue.Callback {
          * @param task the {@link PartitionedRunnable} task that was submitted
          */
         default void onSubmitted(PartitionedRunnable task) {
-        }
-
-        /**
-         * Called when the partition has terminated, meaning that it has finished executing all
-         * tasks and is shutting down completely.
-         */
-        default void onTerminated() {
         }
     }
 }

@@ -70,7 +70,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
                     Partition createdPartition = partitionCreator.create(key);
                     PartitionCallbackDecorator partitionCallbackDecorator = new PartitionCallbackDecorator(key);
                     createdPartition.addCallback(partitionCallbackDecorator);
-                    createdPartition.startPartition();
+                    createdPartition.start();
                     return createdPartition;
                 }).submitForExecution(task);
             }
@@ -98,7 +98,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
     public void shutdown() {
         mainLock.lock();
         try {
-            partitions.forEach((partitionNumber, partition) -> partition.initiateShutdown());
+            partitions.forEach((partitionNumber, partition) -> partition.shutdown());
         } finally {
             mainLock.unlock();
         }
@@ -120,7 +120,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
             long startTime = System.nanoTime();
 
             for (Map.Entry<Integer, Partition> partitionEntry : partitions.entrySet()) {
-                boolean completed = partitionEntry.getValue().awaitTaskCompletion(Duration.ofNanos(remainingNanos));
+                boolean completed = partitionEntry.getValue().awaitTermination(Duration.ofNanos(remainingNanos));
                 if (!completed) {
                     return false;
                 }
@@ -162,7 +162,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
         mainLock.lock();
         try {
             HashMap<Integer, Queue<PartitionedRunnable>> tasksPerPartition = new HashMap<>();
-            partitions.forEach((key, value) -> tasksPerPartition.put(key, value.forceShutdownAndGetPending()));
+            partitions.forEach((key, value) -> tasksPerPartition.put(key, value.shutdownNow()));
             return tasksPerPartition;
         } finally {
             mainLock.unlock();

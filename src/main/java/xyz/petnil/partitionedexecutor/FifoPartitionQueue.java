@@ -4,11 +4,11 @@ import java.time.Duration;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 class FifoPartitionQueue implements PartitionQueue {
-    private final ArrayBlockingQueue<PartitionedRunnable> taskQueue;
+    private final LinkedBlockingQueue<PartitionedRunnable> taskQueue;
     private final int capacity;
 
     public FifoPartitionQueue(int capacity) {
@@ -16,7 +16,7 @@ class FifoPartitionQueue implements PartitionQueue {
             throw new IllegalArgumentException("capacity must be > 0");
         }
         this.capacity = capacity;
-        taskQueue = new ArrayBlockingQueue<>(capacity);
+        taskQueue = new LinkedBlockingQueue<>(capacity);
     }
 
     public int getCapacity() {
