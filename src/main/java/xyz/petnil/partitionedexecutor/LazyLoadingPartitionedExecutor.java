@@ -51,7 +51,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
     }
 
     /**
-     * Executes the given {@link PartitionedRunnable} by determining its partition
+     * Executes the given {@link PartitionedTask} by determining its partition
      * and submitting it for execution. If the corresponding partition does not exist,
      * it is created lazily.
      *
@@ -59,7 +59,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
      * @throws NullPointerException if the task is null
      */
     @Override
-    public void execute(PartitionedRunnable task) {
+    public void execute(PartitionedTask task) {
         Objects.requireNonNull(task);
         mainLock.lock();
         try {
@@ -157,11 +157,11 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
      * @return a map of partition indices to the remaining tasks in each partition
      */
     @Override
-    public Map<Integer, Queue<PartitionedRunnable>> shutdownNow() {
+    public Map<Integer, Queue<PartitionedTask>> shutdownNow() {
         shutdown();
         mainLock.lock();
         try {
-            HashMap<Integer, Queue<PartitionedRunnable>> tasksPerPartition = new HashMap<>();
+            HashMap<Integer, Queue<PartitionedTask>> tasksPerPartition = new HashMap<>();
             partitions.forEach((key, value) -> tasksPerPartition.put(key, value.shutdownNow()));
             return tasksPerPartition;
         } finally {
@@ -219,12 +219,12 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
     private record PartitionCallbackDecorator(int partitionNumber) implements Partition.Callback {
 
         @Override
-        public void onSuccess(PartitionedRunnable task) {
+        public void onSuccess(PartitionedTask task) {
             Partition.Callback.super.onSuccess(task);
         }
 
         @Override
-        public void onError(PartitionedRunnable task, Exception exception) {
+        public void onError(PartitionedTask task, Exception exception) {
             Partition.Callback.super.onError(task, exception);
         }
 
@@ -234,17 +234,17 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
         }
 
         @Override
-        public void onRejected(PartitionedRunnable task) {
+        public void onRejected(PartitionedTask task) {
             Partition.Callback.super.onRejected(task);
         }
 
         @Override
-        public void onDropped(PartitionedRunnable task) {
+        public void onDropped(PartitionedTask task) {
             Partition.Callback.super.onDropped(task);
         }
 
         @Override
-        public void onSubmitted(PartitionedRunnable task) {
+        public void onSubmitted(PartitionedTask task) {
             Partition.Callback.super.onSubmitted(task);
         }
 

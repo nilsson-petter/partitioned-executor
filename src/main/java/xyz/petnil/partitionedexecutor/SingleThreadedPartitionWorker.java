@@ -56,7 +56,7 @@ class SingleThreadedPartitionWorker implements Partition {
     }
 
     @Override
-    public void submitForExecution(PartitionedRunnable task) {
+    public void submitForExecution(PartitionedTask task) {
         Objects.requireNonNull(task);
         State s = state.get();
         if (s == State.SHUTDOWN || s == State.TERMINATED || !partitionQueue.enqueue(task)) {
@@ -70,7 +70,7 @@ class SingleThreadedPartitionWorker implements Partition {
     private void pollAndProcess() {
         while (true) {
             try {
-                PartitionedRunnable nextTask = partitionQueue.getNextTask(Duration.ofSeconds(5));
+                PartitionedTask nextTask = partitionQueue.getNextTask(Duration.ofSeconds(5));
                 State s = state.get();
                 if ((s == State.SHUTDOWN || s == State.TERMINATED) && nextTask == null) {
                     break;
@@ -89,7 +89,7 @@ class SingleThreadedPartitionWorker implements Partition {
         setState(State.TERMINATED, this::onTerminated);
     }
 
-    private void safeGuardedRun(PartitionedRunnable task) {
+    private void safeGuardedRun(PartitionedTask task) {
         try {
             task.run();
             onSuccess(task);
@@ -135,7 +135,7 @@ class SingleThreadedPartitionWorker implements Partition {
     }
 
     @Override
-    public Queue<PartitionedRunnable> shutdownNow() {
+    public Queue<PartitionedTask> shutdownNow() {
         shutdown();
         mainLock.lock();
         try {
@@ -173,21 +173,21 @@ class SingleThreadedPartitionWorker implements Partition {
         callbacks.forEach(consumer);
     }
 
-    private void onSubmitted(PartitionedRunnable task) {
+    private void onSubmitted(PartitionedTask task) {
         callback(c -> c.onSubmitted(task));
     }
 
 
-    private void onSuccess(PartitionedRunnable task) {
+    private void onSuccess(PartitionedTask task) {
         callback(c -> c.onSuccess(task));
     }
 
-    private void onError(PartitionedRunnable task, Exception e) {
+    private void onError(PartitionedTask task, Exception e) {
         callback(c -> c.onError(task, e));
 
     }
 
-    private void onRejected(PartitionedRunnable task) {
+    private void onRejected(PartitionedTask task) {
         callback(c -> c.onRejected(task));
     }
 
@@ -217,7 +217,7 @@ class SingleThreadedPartitionWorker implements Partition {
     private class PartitionQueueCallback implements PartitionQueue.Callback {
 
         @Override
-        public void onDropped(PartitionedRunnable task) {
+        public void onDropped(PartitionedTask task) {
             callback(c -> c.onDropped(task));
         }
     }

@@ -8,7 +8,7 @@ import java.util.Queue;
  * Each partition handles the execution of tasks in isolation, managing its own task queue and lifecycle.
  * The interface provides methods to start the partition, submit tasks for execution, and manage shutdowns.
  *
- * <p>Partitions are responsible for processing {@link PartitionedRunnable} tasks, with task execution
+ * <p>Partitions are responsible for processing {@link PartitionedTask} tasks, with task execution
  * being controlled via a {@link PartitionQueue}. They also support lifecycle management such as
  * starting, shutting down, and awaiting completion of tasks.
  *
@@ -17,7 +17,7 @@ import java.util.Queue;
  * any remaining tasks can be forcibly retrieved.
  *
  * @see PartitionQueue
- * @see PartitionedRunnable
+ * @see PartitionedTask
  * @see PartitionedExecutor
  */
 public interface Partition extends AutoCloseable {
@@ -38,14 +38,14 @@ public interface Partition extends AutoCloseable {
     PartitionQueue getPartitionQueue();
 
     /**
-     * Submits a {@link PartitionedRunnable} task for execution in this partition.
+     * Submits a {@link PartitionedTask} task for execution in this partition.
      * The task is added to the partition's task queue and will be processed
      * by the partition when resources are available.
      *
      * @param task the partitioned task to be executed, must not be null
      * @throws NullPointerException if the task is null.
      */
-    void submitForExecution(PartitionedRunnable task);
+    void submitForExecution(PartitionedTask task);
 
 
     /**
@@ -83,9 +83,9 @@ public interface Partition extends AutoCloseable {
      * Forces the shutdown of the partition and retrieves any pending tasks that have not yet been executed.
      * This method is typically used after a timeout or when a graceful shutdown could not be achieved.
      *
-     * @return a {@link Queue} of {@link PartitionedRunnable} tasks that were pending at the time of shutdown
+     * @return a {@link Queue} of {@link PartitionedTask} tasks that were pending at the time of shutdown
      */
-    Queue<PartitionedRunnable> shutdownNow();
+    Queue<PartitionedTask> shutdownNow();
 
     /**
      * Adds a {@link Callback} to handle various partition-level events, such as task submission,
@@ -147,18 +147,18 @@ public interface Partition extends AutoCloseable {
         /**
          * Called when a task has successfully completed execution in this partition.
          *
-         * @param task the {@link PartitionedRunnable} task that was completed
+         * @param task the {@link PartitionedTask} task that was completed
          */
-        default void onSuccess(PartitionedRunnable task) {
+        default void onSuccess(PartitionedTask task) {
         }
 
         /**
          * Called when a task execution results in an error or exception.
          *
-         * @param task      the {@link PartitionedRunnable} task that caused the error
+         * @param task      the {@link PartitionedTask} task that caused the error
          * @param exception the exception that occurred during execution
          */
-        default void onError(PartitionedRunnable task, Exception exception) {
+        default void onError(PartitionedTask task, Exception exception) {
         }
 
         /**
@@ -171,26 +171,26 @@ public interface Partition extends AutoCloseable {
          * Called when a task is rejected from execution in this partition.
          * This can happen when the queue is full or resources are unavailable.
          *
-         * @param task the {@link PartitionedRunnable} task that was rejected
+         * @param task the {@link PartitionedTask} task that was rejected
          */
-        default void onRejected(PartitionedRunnable task) {
+        default void onRejected(PartitionedTask task) {
         }
 
         /**
          * Called when a task is dropped from the partition's queue. Dropped tasks may occur
          * due to queue overflow or other capacity constraints.
          *
-         * @param task the {@link PartitionedRunnable} task that was dropped
+         * @param task the {@link PartitionedTask} task that was dropped
          */
-        default void onDropped(PartitionedRunnable task) {
+        default void onDropped(PartitionedTask task) {
         }
 
         /**
          * Called when a task has been successfully submitted to the partition's queue for execution.
          *
-         * @param task the {@link PartitionedRunnable} task that was submitted
+         * @param task the {@link PartitionedTask} task that was submitted
          */
-        default void onSubmitted(PartitionedRunnable task) {
+        default void onSubmitted(PartitionedTask task) {
         }
     }
 }

@@ -34,7 +34,7 @@ class SingleThreadedPartitionWorkerTest {
     private PartitionQueue mockQueue;
 
     @Mock
-    private PartitionedRunnable mockTask;
+    private PartitionedTask mockTask;
     @Mock
     private SingleThreadedPartitionWorker.Callback mockCallback;
 
@@ -76,7 +76,7 @@ class SingleThreadedPartitionWorkerTest {
 
     @Test
     void testPollAndProcessSuccess() throws InterruptedException {
-        when(mockQueue.getNextTask(any())).thenReturn(mockTask, (PartitionedRunnable) null);
+        when(mockQueue.getNextTask(any())).thenReturn(mockTask, (PartitionedTask) null);
 
         worker.start();
 
@@ -98,7 +98,7 @@ class SingleThreadedPartitionWorkerTest {
         when(mockQueue.getQueue()).thenReturn(new LinkedList<>(List.of(mockTask)));
         worker.start();
 
-        Queue<PartitionedRunnable> remainingTasks = worker.shutdownNow();
+        Queue<PartitionedTask> remainingTasks = worker.shutdownNow();
 
         assertTrue(worker.isShutdown());
         assertTrue(worker.isTerminated());
@@ -115,7 +115,7 @@ class SingleThreadedPartitionWorkerTest {
     @Test
     void testCallbackOnError() throws InterruptedException {
         doThrow(new RuntimeException("Task failed")).when(mockTask).run();
-        when(mockQueue.getNextTask(any())).thenReturn(mockTask, (PartitionedRunnable) null);
+        when(mockQueue.getNextTask(any())).thenReturn(mockTask, (PartitionedTask) null);
         worker.start();
         verify(mockCallback, timeout(1000)).onError(eq(mockTask), any(RuntimeException.class));
     }

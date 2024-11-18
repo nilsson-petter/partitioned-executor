@@ -14,8 +14,8 @@ class PriorityPartitionQueueTest {
 
     @BeforeEach
     void setUp() {
-        Comparator<PartitionedRunnable> comparator = (o1, o2) -> {
-            if (o1 instanceof PriorityPartitionedRunnable o1p && o2 instanceof PriorityPartitionedRunnable o2p) {
+        Comparator<PartitionedTask> comparator = (o1, o2) -> {
+            if (o1 instanceof PriorityPartitionedTask o1p && o2 instanceof PriorityPartitionedTask o2p) {
                 return o1p.priority - o2p.priority;
             }
             return 0;
@@ -47,7 +47,7 @@ class PriorityPartitionQueueTest {
 
     @Test
     void addAndGet() throws InterruptedException {
-        var task1 = new PriorityPartitionedRunnable(1, 1);
+        var task1 = new PriorityPartitionedTask(1, 1);
         queue.enqueue(task1);
         var nextTask = queue.getNextTask(Duration.ofSeconds(1));
 
@@ -56,8 +56,8 @@ class PriorityPartitionQueueTest {
 
     @Test
     void priorityIsRespected() throws InterruptedException {
-        var task1 = new PriorityPartitionedRunnable(1, 1);
-        var task2 = new PriorityPartitionedRunnable(2, 2);
+        var task1 = new PriorityPartitionedTask(1, 1);
+        var task2 = new PriorityPartitionedTask(2, 2);
         queue.enqueue(task2);
         queue.enqueue(task1);
         assertThat(queue.getQueueSize()).isEqualTo(2);
@@ -68,12 +68,12 @@ class PriorityPartitionQueueTest {
         assertThat(nextTask).isEqualTo(task1);
     }
 
-    private static class PriorityPartitionedRunnable implements PartitionedRunnable {
+    private static class PriorityPartitionedTask implements PartitionedTask {
 
         private final Object partitionKey;
         private final int priority;
 
-        public PriorityPartitionedRunnable(Object partitionKey, int priority) {
+        public PriorityPartitionedTask(Object partitionKey, int priority) {
             this.partitionKey = partitionKey;
             this.priority = priority;
         }

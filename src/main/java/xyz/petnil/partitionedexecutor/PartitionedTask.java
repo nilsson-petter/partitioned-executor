@@ -1,11 +1,11 @@
 package xyz.petnil.partitionedexecutor;
 
 /**
- * The {@code PartitionedRunnable} interface extends {@link Runnable} and represents
+ * The {@code PartitionedTask} interface extends {@link Runnable} and represents
  * a task that is associated with a specific partition key. It is used in partitioned
  * execution environments where tasks are distributed across partitions based on the key.
  *
- * <p>The {@code PartitionedRunnable} defines two key methods:
+ * <p>The {@code PartitionedTask} defines two key methods:
  * <ul>
  *   <li>{@code getPartitionKey()}: Returns the key that determines the partition
  *   to which this task will be routed.</li>
@@ -17,14 +17,14 @@ package xyz.petnil.partitionedexecutor;
  * the {@code getDelegate()} method. This ensures that partitioning logic remains
  * separate from the actual task execution logic.
  *
- * <p><b>Usage:</b> The {@code PartitionedRunnable} is useful in systems
+ * <p><b>Usage:</b> The {@code PartitionedTask} is useful in systems
  * that distribute work across multiple partitions, such as in partitioned executors
  * or parallel processing frameworks.
  *
  * @see Runnable
  * @see PartitionedExecutor
  */
-public interface PartitionedRunnable extends Runnable {
+public interface PartitionedTask extends Runnable {
 
     /**
      * Returns the partition key associated with this task.

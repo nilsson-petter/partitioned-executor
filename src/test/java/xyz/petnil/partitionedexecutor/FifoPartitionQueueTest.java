@@ -20,7 +20,7 @@ class FifoPartitionQueueTest {
     @Test
     void shouldEnqueueTaskSuccessfully() {
         // Given
-        PartitionedRunnable task = createTask("key1");
+        PartitionedTask task = createTask("key1");
 
         // When
         boolean result = partitionQueue.enqueue(task);
@@ -33,8 +33,8 @@ class FifoPartitionQueueTest {
     @Test
     void queueShouldContainTasks() {
         // Given
-        PartitionedRunnable task1 = createTask("key1");
-        PartitionedRunnable task2 = createTask("key1");
+        PartitionedTask task1 = createTask("key1");
+        PartitionedTask task2 = createTask("key1");
 
         // When
         partitionQueue.enqueue(task1);
@@ -69,11 +69,11 @@ class FifoPartitionQueueTest {
     @Test
     void shouldRetrieveTaskWithTimeout() throws InterruptedException {
         // Given
-        PartitionedRunnable task = createTask("key1");
+        PartitionedTask task = createTask("key1");
         partitionQueue.enqueue(task);
 
         // When
-        PartitionedRunnable nextTask = partitionQueue.getNextTask(Duration.ofMillis(500));
+        PartitionedTask nextTask = partitionQueue.getNextTask(Duration.ofMillis(500));
 
         // Then
         assertThat(nextTask).isNotNull();
@@ -84,7 +84,7 @@ class FifoPartitionQueueTest {
     @Test
     void shouldReturnNullWhenTimeoutExpiresWithoutTask() throws InterruptedException {
         // When
-        PartitionedRunnable nextTask = partitionQueue.getNextTask(Duration.ofMillis(500));
+        PartitionedTask nextTask = partitionQueue.getNextTask(Duration.ofMillis(500));
 
         // Then
         assertThat(nextTask).isNull(); // No tasks, should return null
@@ -110,9 +110,8 @@ class FifoPartitionQueueTest {
         assertThat(size).isEqualTo(2);
     }
 
-    // Helper method to create a PartitionedRunnable
-    private PartitionedRunnable createTask(String partitionKey) {
-        return new PartitionedRunnable() {
+    private PartitionedTask createTask(String partitionKey) {
+        return new PartitionedTask() {
             @Override
             public Object getPartitionKey() {
                 return partitionKey;

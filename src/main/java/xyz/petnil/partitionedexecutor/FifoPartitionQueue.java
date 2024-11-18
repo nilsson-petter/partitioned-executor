@@ -8,7 +8,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 class FifoPartitionQueue implements PartitionQueue {
-    private final LinkedBlockingQueue<PartitionedRunnable> taskQueue;
+    private final LinkedBlockingQueue<PartitionedTask> taskQueue;
     private final int capacity;
 
     public FifoPartitionQueue(int capacity) {
@@ -24,19 +24,19 @@ class FifoPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public boolean enqueue(PartitionedRunnable task) {
+    public boolean enqueue(PartitionedTask task) {
         Objects.requireNonNull(task);
         return taskQueue.offer(task);
     }
 
     @Override
-    public PartitionedRunnable getNextTask(Duration timeout) throws InterruptedException {
+    public PartitionedTask getNextTask(Duration timeout) throws InterruptedException {
         Objects.requireNonNull(timeout);
         return taskQueue.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     @Override
-    public Queue<PartitionedRunnable> getQueue() {
+    public Queue<PartitionedTask> getQueue() {
         return new LinkedList<>(taskQueue);
     }
 

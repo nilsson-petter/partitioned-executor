@@ -12,25 +12,25 @@ import java.util.stream.Collectors;
 class PriorityPartitionQueue implements PartitionQueue {
     private final PriorityBlockingQueue<PriorityTask> taskQueue;
 
-    private final Comparator<PartitionedRunnable> comparator;
+    private final Comparator<PartitionedTask> comparator;
 
-    public PriorityPartitionQueue(Comparator<PartitionedRunnable> comparator) {
+    public PriorityPartitionQueue(Comparator<PartitionedTask> comparator) {
         this.comparator = Objects.requireNonNull(comparator);
         this.taskQueue = new PriorityBlockingQueue<>();
     }
 
-    public Comparator<PartitionedRunnable> getComparator() {
+    public Comparator<PartitionedTask> getComparator() {
         return comparator;
     }
 
     @Override
-    public boolean enqueue(PartitionedRunnable task) {
+    public boolean enqueue(PartitionedTask task) {
         Objects.requireNonNull(task);
         return taskQueue.add(new PriorityTask(task));
     }
 
     @Override
-    public PartitionedRunnable getNextTask(Duration timeout) throws InterruptedException {
+    public PartitionedTask getNextTask(Duration timeout) throws InterruptedException {
         Objects.requireNonNull(timeout);
         PriorityTask poll = taskQueue.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
         if (poll != null) {
@@ -50,7 +50,7 @@ class PriorityPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public Queue<PartitionedRunnable> getQueue() {
+    public Queue<PartitionedTask> getQueue() {
         return new LinkedList<>(taskQueue)
                 .stream()
                 .map(o -> o.delegate)
@@ -63,9 +63,9 @@ class PriorityPartitionQueue implements PartitionQueue {
     }
 
     private final class PriorityTask implements Comparable<PriorityTask> {
-        private final PartitionedRunnable delegate;
+        private final PartitionedTask delegate;
 
-        public PriorityTask(PartitionedRunnable delegate) {
+        public PriorityTask(PartitionedTask delegate) {
             this.delegate = delegate;
         }
 

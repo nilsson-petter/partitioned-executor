@@ -21,7 +21,7 @@ public interface PartitionedExecutor extends AutoCloseable {
      * @param task the task to execute, must not be null
      * @throws NullPointerException if the task is null
      */
-    void execute(PartitionedRunnable task);
+    void execute(PartitionedTask task);
 
     /**
      * Returns the {@link Partitioner} used by this executor to route tasks to partitions.
@@ -52,7 +52,7 @@ public interface PartitionedExecutor extends AutoCloseable {
      *
      * @return a map of partition indices to remaining tasks that were not executed
      */
-    Map<Integer, Queue<PartitionedRunnable>> shutdownNow();
+    Map<Integer, Queue<PartitionedTask>> shutdownNow();
 
     /**
      * Returns the list of partitions currently managed by this executor. This provides insight into

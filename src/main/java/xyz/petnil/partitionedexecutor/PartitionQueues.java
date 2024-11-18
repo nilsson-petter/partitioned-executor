@@ -14,7 +14,7 @@ public class PartitionQueues {
         return new TrailingThrottledPartitionQueue(throttlingFunction);
     }
 
-    public static PartitionQueue priority(Comparator<PartitionedRunnable> comparator) {
+    public static PartitionQueue priority(Comparator<PartitionedTask> comparator) {
         return new PriorityPartitionQueue(comparator);
     }
 }

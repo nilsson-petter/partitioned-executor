@@ -26,7 +26,7 @@ class PartitionQueuesTest {
 
     @Test
     void priority() {
-        Comparator<PartitionedRunnable> comparator = (p1, p2) -> 0;
+        Comparator<PartitionedTask> comparator = (p1, p2) -> 0;
         PartitionQueue partitionQueue = PartitionQueues.priority(comparator);
         assertThat(partitionQueue).isInstanceOf(PriorityPartitionQueue.class);
         assertThat(((PriorityPartitionQueue) partitionQueue).getComparator()).isEqualTo(comparator);

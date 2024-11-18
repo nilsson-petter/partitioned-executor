@@ -19,7 +19,7 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
     private final Lock mapLock = new ReentrantLock();
 
     private final BlockingQueue<DelayedObject> partitionKeyQueue = new DelayQueue<>();
-    private final Map<Object, PartitionedRunnable> taskPerPartitionKeyMap = new HashMap<>();
+    private final Map<Object, PartitionedTask> taskPerPartitionKeyMap = new HashMap<>();
     private final ThrottlingFunction throttlingFunction;
 
     private final Set<Callback> callbacks = ConcurrentHashMap.newKeySet();
@@ -32,18 +32,18 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
         return throttlingFunction;
     }
 
-    public Map<Object, PartitionedRunnable> getState() {
+    public Map<Object, PartitionedTask> getState() {
         return new HashMap<>(taskPerPartitionKeyMap);
     }
 
     @Override
-    public boolean enqueue(PartitionedRunnable task) {
+    public boolean enqueue(PartitionedTask task) {
         Objects.requireNonNull(task);
         Object partitionKey = task.getPartitionKey();
 
         mapLock.lock();
         try {
-            PartitionedRunnable previousTask = taskPerPartitionKeyMap.put(partitionKey, task);
+            PartitionedTask previousTask = taskPerPartitionKeyMap.put(partitionKey, task);
             if (previousTask != null) {
                 onDropped(previousTask);
                 return true;
@@ -59,7 +59,7 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public PartitionedRunnable getNextTask(Duration duration) throws InterruptedException {
+    public PartitionedTask getNextTask(Duration duration) throws InterruptedException {
         DelayedObject delayedPartitionKey = partitionKeyQueue.poll(duration.toMillis(), TimeUnit.MILLISECONDS);
 
         if (delayedPartitionKey == null) {
@@ -74,18 +74,18 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
         }
     }
 
-    private void onDropped(PartitionedRunnable task) {
+    private void onDropped(PartitionedTask task) {
         callbacks.forEach(c -> c.onDropped(task));
     }
 
     @Override
-    public Queue<PartitionedRunnable> getQueue() {
-        Queue<PartitionedRunnable> snapshotQueue = new LinkedList<>();
+    public Queue<PartitionedTask> getQueue() {
+        Queue<PartitionedTask> snapshotQueue = new LinkedList<>();
 
         mapLock.lock();
         try {
             for (DelayedObject d : partitionKeyQueue) {
-                PartitionedRunnable task = taskPerPartitionKeyMap.get(d.getObject());
+                PartitionedTask task = taskPerPartitionKeyMap.get(d.getObject());
                 if (task != null) {
                     snapshotQueue.add(task);
                 }

@@ -20,13 +20,13 @@ class TrailingThrottledPartitionQueueTest {
     private static final String PARTITION_KEY = "AAPL";
     private TrailingThrottledPartitionQueue trailingThrottledPartitionQueue;
     private ThrottlingFunction throttlingFunction;
-    private PartitionedRunnable mockTask;
+    private PartitionedTask mockTask;
 
     @BeforeEach
     void setUp() {
         throttlingFunction = mock(ThrottlingFunction.class);
         when(throttlingFunction.getThrottlingInterval(any())).thenReturn(Duration.ofMillis(50));
-        mockTask = mock(PartitionedRunnable.class);
+        mockTask = mock(PartitionedTask.class);
         when(mockTask.getPartitionKey()).thenReturn(PARTITION_KEY);
         trailingThrottledPartitionQueue = new TrailingThrottledPartitionQueue(throttlingFunction);
     }
@@ -41,8 +41,8 @@ class TrailingThrottledPartitionQueueTest {
     @Test
     void enqueue_taskIsReplacedAndDropped() throws InterruptedException {
         String partitionKey = "TSLA";
-        PartitionedRunnable firstTask = mock(PartitionedRunnable.class);
-        PartitionedRunnable secondTask = mock(PartitionedRunnable.class);
+        PartitionedTask firstTask = mock(PartitionedTask.class);
+        PartitionedTask secondTask = mock(PartitionedTask.class);
         when(firstTask.getPartitionKey()).thenReturn(partitionKey);
         when(secondTask.getPartitionKey()).thenReturn(partitionKey);
         PartitionQueue.Callback callback = mock(PartitionQueue.Callback.class);
@@ -61,7 +61,7 @@ class TrailingThrottledPartitionQueueTest {
                 .containsValue(secondTask)
                 .containsKey(partitionKey);
 
-        PartitionedRunnable firstInQueue = trailingThrottledPartitionQueue.getNextTask(Duration.ofSeconds(1));
+        PartitionedTask firstInQueue = trailingThrottledPartitionQueue.getNextTask(Duration.ofSeconds(1));
         assertEquals(secondTask, firstInQueue);
 
         verify(callback, times(1)).onDropped(firstTask);
@@ -71,14 +71,14 @@ class TrailingThrottledPartitionQueueTest {
     void getNextTask_shouldReturnTask_whenAvailable() throws InterruptedException {
         when(throttlingFunction.getThrottlingInterval(any())).thenReturn(Duration.ofMillis(20));
         trailingThrottledPartitionQueue.enqueue(mockTask);
-        PartitionedRunnable retrievedTask = trailingThrottledPartitionQueue.getNextTask(Duration.ofMillis(40));
+        PartitionedTask retrievedTask = trailingThrottledPartitionQueue.getNextTask(Duration.ofMillis(40));
         assertThat(retrievedTask).isEqualTo(mockTask);
         assertThat(trailingThrottledPartitionQueue.getQueueSize()).isEqualTo(0);
     }
 
     @Test
     void getNextTask_shouldReturnNull_whenNoTaskAvailable() throws InterruptedException {
-        PartitionedRunnable retrievedTask = trailingThrottledPartitionQueue.getNextTask(Duration.ofMillis(100));
+        PartitionedTask retrievedTask = trailingThrottledPartitionQueue.getNextTask(Duration.ofMillis(100));
         assertThat(retrievedTask).isNull();
     }
 
@@ -86,7 +86,7 @@ class TrailingThrottledPartitionQueueTest {
     void getNextTask_shouldReturnNull_whenNotAvailableYet() throws InterruptedException {
         when(throttlingFunction.getThrottlingInterval(any())).thenReturn(Duration.ofDays(1));
         trailingThrottledPartitionQueue.enqueue(mockTask);
-        PartitionedRunnable retrievedTask = trailingThrottledPartitionQueue.getNextTask(Duration.ofMillis(1));
+        PartitionedTask retrievedTask = trailingThrottledPartitionQueue.getNextTask(Duration.ofMillis(1));
         // Assert
         assertThat(retrievedTask).isNull();
     }
@@ -101,9 +101,9 @@ class TrailingThrottledPartitionQueueTest {
     void getQueue_shouldReturnAllQueuedTasks() {
         // Arrange
         when(throttlingFunction.getThrottlingInterval(any())).thenReturn(Duration.ofDays(1));
-        List<PartitionedRunnable> expectedList = new ArrayList<>();
+        List<PartitionedTask> expectedList = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            PartitionedRunnable task = mock(PartitionedRunnable.class);
+            PartitionedTask task = mock(PartitionedTask.class);
             when(task.getPartitionKey()).thenReturn(i);
             expectedList.add(task);
             trailingThrottledPartitionQueue.enqueue(task);
@@ -117,9 +117,9 @@ class TrailingThrottledPartitionQueueTest {
     @Test
     void removeCallback() {
         String partitionKey = "TSLA";
-        var firstTask = mock(PartitionedRunnable.class);
-        var secondTask = mock(PartitionedRunnable.class);
-        var thirdTask = mock(PartitionedRunnable.class);
+        var firstTask = mock(PartitionedTask.class);
+        var secondTask = mock(PartitionedTask.class);
+        var thirdTask = mock(PartitionedTask.class);
         when(firstTask.getPartitionKey()).thenReturn(partitionKey);
         when(secondTask.getPartitionKey()).thenReturn(partitionKey);
         when(thirdTask.getPartitionKey()).thenReturn(partitionKey);
