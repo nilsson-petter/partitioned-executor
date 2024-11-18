@@ -1,5 +1,5 @@
 package xyz.petnil.partitionedexecutor;
 
-public interface PartitionQueueCreator {
-    PartitionQueue create();
+public interface PartitionQueueCreator<T extends PartitionedTask> {
+    PartitionQueue<T> create();
 }

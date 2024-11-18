@@ -20,7 +20,7 @@ import java.util.Queue;
  * @see PartitionedTask
  * @see PartitionedExecutor
  */
-public interface Partition extends AutoCloseable {
+public interface Partition<T extends PartitionedTask> extends AutoCloseable {
 
     /**
      * Starts the execution of tasks in this partition. This typically involves starting the
@@ -35,7 +35,7 @@ public interface Partition extends AutoCloseable {
      *
      * @return the partition's task queue
      */
-    PartitionQueue getPartitionQueue();
+    PartitionQueue<T> getPartitionQueue();
 
     /**
      * Submits a {@link PartitionedTask} task for execution in this partition.
@@ -45,7 +45,7 @@ public interface Partition extends AutoCloseable {
      * @param task the partitioned task to be executed, must not be null
      * @throws NullPointerException if the task is null.
      */
-    void submitForExecution(PartitionedTask task);
+    void submitForExecution(T task);
 
 
     /**
@@ -85,7 +85,7 @@ public interface Partition extends AutoCloseable {
      *
      * @return a {@link Queue} of {@link PartitionedTask} tasks that were pending at the time of shutdown
      */
-    Queue<PartitionedTask> shutdownNow();
+    Queue<T> shutdownNow();
 
     /**
      * Adds a {@link Callback} to handle various partition-level events, such as task submission,
@@ -94,7 +94,7 @@ public interface Partition extends AutoCloseable {
      * @param callback the {@link Callback} to be added
      * @throws NullPointerException if the {@link Callback} is null
      */
-    void addCallback(Callback callback);
+    void addCallback(Callback<T> callback);
 
     /**
      * Removes the provided {@link Callback}.
@@ -102,7 +102,7 @@ public interface Partition extends AutoCloseable {
      * @param callback the {@link Callback} to be added
      * @throws NullPointerException if the {@link Callback} is null.
      */
-    void removeCallback(Callback callback);
+    void removeCallback(Callback<T> callback);
 
     /**
      * Initiates the shutdown of the partition and attempts to await task completion.
@@ -122,7 +122,7 @@ public interface Partition extends AutoCloseable {
      * The {@code Callback} interface defines event handlers for various partition-level events,
      * such as task success, failure, rejection, and shutdown.
      */
-    interface Callback {
+    interface Callback<T extends PartitionedTask> {
 
         /**
          * Called when the partition has been started, meaning that it has begun executing tasks.
@@ -149,7 +149,7 @@ public interface Partition extends AutoCloseable {
          *
          * @param task the {@link PartitionedTask} task that was completed
          */
-        default void onSuccess(PartitionedTask task) {
+        default void onSuccess(T task) {
         }
 
         /**
@@ -158,7 +158,7 @@ public interface Partition extends AutoCloseable {
          * @param task      the {@link PartitionedTask} task that caused the error
          * @param exception the exception that occurred during execution
          */
-        default void onError(PartitionedTask task, Exception exception) {
+        default void onError(T task, Exception exception) {
         }
 
         /**
@@ -173,7 +173,7 @@ public interface Partition extends AutoCloseable {
          *
          * @param task the {@link PartitionedTask} task that was rejected
          */
-        default void onRejected(PartitionedTask task) {
+        default void onRejected(T task) {
         }
 
         /**
@@ -182,7 +182,7 @@ public interface Partition extends AutoCloseable {
          *
          * @param task the {@link PartitionedTask} task that was dropped
          */
-        default void onDropped(PartitionedTask task) {
+        default void onDropped(T task) {
         }
 
         /**
@@ -190,7 +190,7 @@ public interface Partition extends AutoCloseable {
          *
          * @param task the {@link PartitionedTask} task that was submitted
          */
-        default void onSubmitted(PartitionedTask task) {
+        default void onSubmitted(T task) {
         }
     }
 }

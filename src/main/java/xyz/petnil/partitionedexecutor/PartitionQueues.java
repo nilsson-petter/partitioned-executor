@@ -1,20 +1,14 @@
 package xyz.petnil.partitionedexecutor;
 
-import java.util.Comparator;
-
 public class PartitionQueues {
     private PartitionQueues() {
     }
 
-    public static PartitionQueue fifo(int capacity) {
-        return new FifoPartitionQueue(capacity);
+    public static <T extends PartitionedTask> PartitionQueue<T> fifo(int capacity) {
+        return new FifoPartitionQueue<>(capacity);
     }
 
-    public static PartitionQueue trailingThrottled(ThrottlingFunction throttlingFunction) {
-        return new TrailingThrottledPartitionQueue(throttlingFunction);
-    }
-
-    public static PartitionQueue priority(Comparator<PartitionedTask> comparator) {
-        return new PriorityPartitionQueue(comparator);
+    public static <T extends PartitionedTask> PartitionQueue<T> trailingThrottled(ThrottlingFunction throttlingFunction) {
+        return new TrailingThrottledPartitionQueue<>(throttlingFunction);
     }
 }

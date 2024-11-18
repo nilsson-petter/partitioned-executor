@@ -7,8 +7,8 @@ import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-class FifoPartitionQueue implements PartitionQueue {
-    private final LinkedBlockingQueue<PartitionedTask> taskQueue;
+class FifoPartitionQueue<T extends PartitionedTask> implements PartitionQueue<T> {
+    private final LinkedBlockingQueue<T> taskQueue;
     private final int capacity;
 
     public FifoPartitionQueue(int capacity) {
@@ -24,19 +24,19 @@ class FifoPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public boolean enqueue(PartitionedTask task) {
+    public boolean enqueue(T task) {
         Objects.requireNonNull(task);
         return taskQueue.offer(task);
     }
 
     @Override
-    public PartitionedTask getNextTask(Duration timeout) throws InterruptedException {
+    public T getNextTask(Duration timeout) throws InterruptedException {
         Objects.requireNonNull(timeout);
         return taskQueue.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     @Override
-    public Queue<PartitionedTask> getQueue() {
+    public Queue<T> getQueue() {
         return new LinkedList<>(taskQueue);
     }
 
@@ -46,12 +46,12 @@ class FifoPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public void removeCallback(Callback callback) {
+    public void removeCallback(Callback<T> callback) {
         // Not implemented
     }
 
     @Override
-    public void addCallback(Callback callback) {
+    public void addCallback(Callback<T> callback) {
         // Not implemented
     }
 

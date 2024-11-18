@@ -11,24 +11,17 @@ class PartitionQueuesTest {
 
     @Test
     void fifo() {
-        PartitionQueue partitionQueue = PartitionQueues.fifo(10);
+        PartitionQueue<?> partitionQueue = PartitionQueues.fifo(10);
         assertThat(partitionQueue).isInstanceOf(FifoPartitionQueue.class);
-        assertThat(((FifoPartitionQueue) partitionQueue).getCapacity()).isEqualTo(10);
+        assertThat(((FifoPartitionQueue<?>) partitionQueue).getCapacity()).isEqualTo(10);
     }
 
     @Test
     void trailingThrottled() {
         ThrottlingFunction throttlingFunction = o -> Duration.ZERO;
-        PartitionQueue partitionQueue = PartitionQueues.trailingThrottled(throttlingFunction);
+        PartitionQueue<PartitionedTask> partitionQueue = PartitionQueues.trailingThrottled(throttlingFunction);
         assertThat(partitionQueue).isInstanceOf(TrailingThrottledPartitionQueue.class);
-        assertThat(((TrailingThrottledPartitionQueue) partitionQueue).getThrottlingFunction()).isEqualTo(throttlingFunction);
+        assertThat(((TrailingThrottledPartitionQueue<?>) partitionQueue).getThrottlingFunction()).isEqualTo(throttlingFunction);
     }
 
-    @Test
-    void priority() {
-        Comparator<PartitionedTask> comparator = (p1, p2) -> 0;
-        PartitionQueue partitionQueue = PartitionQueues.priority(comparator);
-        assertThat(partitionQueue).isInstanceOf(PriorityPartitionQueue.class);
-        assertThat(((PriorityPartitionQueue) partitionQueue).getComparator()).isEqualTo(comparator);
-    }
 }

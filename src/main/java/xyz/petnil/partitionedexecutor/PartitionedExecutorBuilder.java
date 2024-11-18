@@ -1,76 +1,75 @@
 package xyz.petnil.partitionedexecutor;
 
-public class PartitionedExecutorBuilder {
+public class PartitionedExecutorBuilder<T extends PartitionedTask> {
     private final int maxPartitions;
     private PartitionerCreator partitioner;
-    private PartitionCreator partitionCreator;
+    private PartitionCreator<T> partitionCreator;
 
     private PartitionedExecutorBuilder(int maxPartitions) {
         this.maxPartitions = maxPartitions;
         this.partitioner = Partitioners::generalPurpose;
-        this.partitionCreator = new PartitionCreatorBuilder(this).createPartitionCreator();
     }
 
-    public static PartitionedExecutorBuilder newBuilder(int maxPartitions) {
-        return new PartitionedExecutorBuilder(maxPartitions);
+    public static <T extends PartitionedTask> PartitionedExecutorBuilder<T> newBuilder(int maxPartitions) {
+        return new PartitionedExecutorBuilder<>(maxPartitions);
     }
 
-    public PartitionedExecutorBuilder withPartitioner(PartitionerCreator partitioner) {
+    public PartitionedExecutorBuilder<T> withPartitioner(PartitionerCreator partitioner) {
         this.partitioner = partitioner;
         return this;
     }
 
-    public PartitionedExecutorBuilder withPartitionCreator(PartitionCreator partitionCreator) {
+    public PartitionedExecutorBuilder<T> withPartitionCreator(PartitionCreator<T> partitionCreator) {
         this.partitionCreator = partitionCreator;
         return this;
     }
 
-    public PartitionCreatorBuilder configurePartitionCreator() {
-        return new PartitionCreatorBuilder(this);
+    public PartitionCreatorBuilder<T> configurePartitionCreator() {
+        return new PartitionCreatorBuilder<>(this);
     }
 
-    public PartitionedExecutor build() {
-        return new LazyLoadingPartitionedExecutor(partitioner.createPartitioner(maxPartitions), partitionCreator);
+    public PartitionedExecutor<T> build() {
+        if (partitionCreator == null) {
+            partitionCreator = new PartitionCreatorBuilder<>(this).createPartitionCreator();
+        }
+        return new LazyLoadingPartitionedExecutor<>(partitioner.createPartitioner(maxPartitions), partitionCreator);
     }
 
-    public static class PartitionCreatorBuilder {
-        private final PartitionedExecutorBuilder parentBuilder;
+    public static class PartitionCreatorBuilder<T extends PartitionedTask> {
+        private final PartitionedExecutorBuilder<T> parentBuilder;
         private PartitionThreadFactoryCreator threadFactory;
         private String threadNamePrefix = "SingleThreadedPartitionWorker";
-        private PartitionQueueCreator partitionQueueCreator = () -> PartitionQueues.fifo(Integer.MAX_VALUE);
+        private PartitionQueueCreator<T> partitionQueueCreator = () -> PartitionQueues.<T>fifo(Integer.MAX_VALUE);
 
-
-        private PartitionCreatorBuilder(PartitionedExecutorBuilder parentBuilder) {
+        private PartitionCreatorBuilder(PartitionedExecutorBuilder<T> parentBuilder) {
             this.parentBuilder = parentBuilder;
         }
 
-        public PartitionCreatorBuilder withPartitionQueueCreator(PartitionQueueCreator partitionQueueCreator) {
+        public PartitionCreatorBuilder<T> withPartitionQueueCreator(PartitionQueueCreator<T> partitionQueueCreator) {
             this.partitionQueueCreator = partitionQueueCreator;
             return this;
         }
 
-        public PartitionCreatorBuilder withThreadNamePrefix(String threadNamePrefix) {
+        public PartitionCreatorBuilder<T> withThreadNamePrefix(String threadNamePrefix) {
             this.threadNamePrefix = threadNamePrefix;
             return this;
         }
 
-        public PartitionCreatorBuilder withThreadFactory(PartitionThreadFactoryCreator threadFactory) {
+        public PartitionCreatorBuilder<T> withThreadFactory(PartitionThreadFactoryCreator threadFactory) {
             this.threadFactory = threadFactory;
             return this;
         }
 
-        // Finalize PartitionCreator and return control to the main builder
-        public PartitionedExecutorBuilder buildPartitionCreator() {
+        public PartitionedExecutorBuilder<T> buildPartitionCreator() {
             parentBuilder.partitionCreator = createPartitionCreator();
             return parentBuilder;
         }
 
-        private PartitionCreator createPartitionCreator() {
+        private PartitionCreator<T> createPartitionCreator() {
             if (threadFactory == null) {
                 threadFactory = PartitionThreadFactoryCreators.virtualThread(threadNamePrefix);
             }
-
-            return i -> new SingleThreadedPartitionWorker(partitionQueueCreator.create(), threadFactory.createThreadFactory(i));
+            return i -> new SingleThreadedPartitionWorker<>(partitionQueueCreator.create(), threadFactory.createThreadFactory(i));
         }
     }
 }

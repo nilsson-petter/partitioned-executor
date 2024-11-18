@@ -15,14 +15,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-class TrailingThrottledPartitionQueue implements PartitionQueue {
+class TrailingThrottledPartitionQueue<T extends PartitionedTask> implements PartitionQueue<T> {
     private final Lock mapLock = new ReentrantLock();
 
     private final BlockingQueue<DelayedObject> partitionKeyQueue = new DelayQueue<>();
-    private final Map<Object, PartitionedTask> taskPerPartitionKeyMap = new HashMap<>();
+    private final Map<Object, T> taskPerPartitionKeyMap = new HashMap<>();
     private final ThrottlingFunction throttlingFunction;
 
-    private final Set<Callback> callbacks = ConcurrentHashMap.newKeySet();
+    private final Set<Callback<T>> callbacks = ConcurrentHashMap.newKeySet();
 
     public TrailingThrottledPartitionQueue(ThrottlingFunction throttlingFunction) {
         this.throttlingFunction = Objects.requireNonNull(throttlingFunction);
@@ -32,18 +32,18 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
         return throttlingFunction;
     }
 
-    public Map<Object, PartitionedTask> getState() {
+    public Map<Object, T> getState() {
         return new HashMap<>(taskPerPartitionKeyMap);
     }
 
     @Override
-    public boolean enqueue(PartitionedTask task) {
+    public boolean enqueue(T task) {
         Objects.requireNonNull(task);
         Object partitionKey = task.getPartitionKey();
 
         mapLock.lock();
         try {
-            PartitionedTask previousTask = taskPerPartitionKeyMap.put(partitionKey, task);
+            T previousTask = taskPerPartitionKeyMap.put(partitionKey, task);
             if (previousTask != null) {
                 onDropped(previousTask);
                 return true;
@@ -59,7 +59,7 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public PartitionedTask getNextTask(Duration duration) throws InterruptedException {
+    public T getNextTask(Duration duration) throws InterruptedException {
         DelayedObject delayedPartitionKey = partitionKeyQueue.poll(duration.toMillis(), TimeUnit.MILLISECONDS);
 
         if (delayedPartitionKey == null) {
@@ -74,18 +74,18 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
         }
     }
 
-    private void onDropped(PartitionedTask task) {
+    private void onDropped(T task) {
         callbacks.forEach(c -> c.onDropped(task));
     }
 
     @Override
-    public Queue<PartitionedTask> getQueue() {
-        Queue<PartitionedTask> snapshotQueue = new LinkedList<>();
+    public Queue<T> getQueue() {
+        Queue<T> snapshotQueue = new LinkedList<>();
 
         mapLock.lock();
         try {
             for (DelayedObject d : partitionKeyQueue) {
-                PartitionedTask task = taskPerPartitionKeyMap.get(d.getObject());
+                T task = taskPerPartitionKeyMap.get(d.getObject());
                 if (task != null) {
                     snapshotQueue.add(task);
                 }
@@ -103,13 +103,13 @@ class TrailingThrottledPartitionQueue implements PartitionQueue {
     }
 
     @Override
-    public void removeCallback(Callback callback) {
+    public void removeCallback(Callback<T> callback) {
         Objects.requireNonNull(callback);
         callbacks.remove(callback);
     }
 
     @Override
-    public void addCallback(Callback callback) {
+    public void addCallback(Callback<T> callback) {
         Objects.requireNonNull(callback);
         callbacks.add(callback);
     }

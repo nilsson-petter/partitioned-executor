@@ -15,7 +15,7 @@ package xyz.petnil.partitionedexecutor;
  * @see PartitionedExecutor
  */
 @FunctionalInterface
-public interface PartitionCreator {
+public interface PartitionCreator<T extends PartitionedTask> {
 
     /**
      * Creates a new {@link Partition} for the specified partition number.
@@ -24,5 +24,5 @@ public interface PartitionCreator {
      * @return a new {@code Partition} instance corresponding to the given partition number
      * @throws IllegalArgumentException if the partition number is invalid (e.g., negative)
      */
-    Partition create(int partitionNumber);
+    Partition<T> create(int partitionNumber);
 }

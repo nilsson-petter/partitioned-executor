@@ -11,17 +11,17 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-class SingleThreadedPartitionWorker implements Partition {
+class SingleThreadedPartitionWorker<T extends PartitionedTask> implements Partition<T> {
     private final Lock mainLock = new ReentrantLock();
-    private final PartitionQueue partitionQueue;
+    private final PartitionQueue<T> partitionQueue;
     private final ThreadFactory threadFactory;
-    private final Set<Callback> callbacks = ConcurrentHashMap.newKeySet();
+    private final Set<Callback<T>> callbacks = ConcurrentHashMap.newKeySet();
     private final AtomicReference<State> state = new AtomicReference<>(State.NEW);
 
     private Thread thread;
 
     public SingleThreadedPartitionWorker(
-            PartitionQueue partitionQueue,
+            PartitionQueue<T> partitionQueue,
             ThreadFactory threadFactory
     ) {
         this.partitionQueue = Objects.requireNonNull(partitionQueue);
@@ -51,12 +51,12 @@ class SingleThreadedPartitionWorker implements Partition {
     }
 
     @Override
-    public PartitionQueue getPartitionQueue() {
+    public PartitionQueue<T> getPartitionQueue() {
         return partitionQueue;
     }
 
     @Override
-    public void submitForExecution(PartitionedTask task) {
+    public void submitForExecution(T task) {
         Objects.requireNonNull(task);
         State s = state.get();
         if (s == State.SHUTDOWN || s == State.TERMINATED || !partitionQueue.enqueue(task)) {
@@ -70,7 +70,7 @@ class SingleThreadedPartitionWorker implements Partition {
     private void pollAndProcess() {
         while (true) {
             try {
-                PartitionedTask nextTask = partitionQueue.getNextTask(Duration.ofSeconds(5));
+                T nextTask = partitionQueue.getNextTask(Duration.ofSeconds(5));
                 State s = state.get();
                 if ((s == State.SHUTDOWN || s == State.TERMINATED) && nextTask == null) {
                     break;
@@ -89,7 +89,7 @@ class SingleThreadedPartitionWorker implements Partition {
         setState(State.TERMINATED, this::onTerminated);
     }
 
-    private void safeGuardedRun(PartitionedTask task) {
+    private void safeGuardedRun(T task) {
         try {
             task.run();
             onSuccess(task);
@@ -135,7 +135,7 @@ class SingleThreadedPartitionWorker implements Partition {
     }
 
     @Override
-    public Queue<PartitionedTask> shutdownNow() {
+    public Queue<T> shutdownNow() {
         shutdown();
         mainLock.lock();
         try {
@@ -160,34 +160,34 @@ class SingleThreadedPartitionWorker implements Partition {
     }
 
     @Override
-    public void addCallback(Callback callback) {
+    public void addCallback(Callback<T> callback) {
         callbacks.add(callback);
     }
 
     @Override
-    public void removeCallback(Callback callback) {
+    public void removeCallback(Callback<T> callback) {
         callbacks.remove(callback);
     }
 
-    private void callback(Consumer<Callback> consumer) {
+    private void callback(Consumer<Callback<T>> consumer) {
         callbacks.forEach(consumer);
     }
 
-    private void onSubmitted(PartitionedTask task) {
+    private void onSubmitted(T task) {
         callback(c -> c.onSubmitted(task));
     }
 
 
-    private void onSuccess(PartitionedTask task) {
+    private void onSuccess(T task) {
         callback(c -> c.onSuccess(task));
     }
 
-    private void onError(PartitionedTask task, Exception e) {
+    private void onError(T task, Exception e) {
         callback(c -> c.onError(task, e));
 
     }
 
-    private void onRejected(PartitionedTask task) {
+    private void onRejected(T task) {
         callback(c -> c.onRejected(task));
     }
 
@@ -214,10 +214,10 @@ class SingleThreadedPartitionWorker implements Partition {
         TERMINATED
     }
 
-    private class PartitionQueueCallback implements PartitionQueue.Callback {
+    private class PartitionQueueCallback implements PartitionQueue.Callback<T> {
 
         @Override
-        public void onDropped(PartitionedTask task) {
+        public void onDropped(T task) {
             callback(c -> c.onDropped(task));
         }
     }

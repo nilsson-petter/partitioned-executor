@@ -4,8 +4,8 @@ public class PartitionedExecutors {
     private PartitionedExecutors() {
     }
 
-    public static PartitionedExecutor fifo(int maxPartitions, int maxQueueSize) {
-        return PartitionedExecutorBuilder.newBuilder(maxPartitions)
+    public static <T extends PartitionedTask> PartitionedExecutor<T> fifo(int maxPartitions, int maxQueueSize) {
+        return PartitionedExecutorBuilder.<T>newBuilder(maxPartitions)
                 .withPartitioner(getPartitioner(maxPartitions))
                 .configurePartitionCreator()
                 .withPartitionQueueCreator(() -> PartitionQueues.fifo(maxQueueSize))
@@ -13,8 +13,8 @@ public class PartitionedExecutors {
                 .build();
     }
 
-    public static PartitionedExecutor trailingThrottled(int maxPartitions, ThrottlingFunction throttlingFunction) {
-        return PartitionedExecutorBuilder.newBuilder(maxPartitions)
+    public static <T extends PartitionedTask> PartitionedExecutor<T> trailingThrottled(int maxPartitions, ThrottlingFunction throttlingFunction) {
+        return PartitionedExecutorBuilder.<T>newBuilder(maxPartitions)
                 .withPartitioner(getPartitioner(maxPartitions))
                 .configurePartitionCreator()
                 .withPartitionQueueCreator(() -> PartitionQueues.trailingThrottled(throttlingFunction))

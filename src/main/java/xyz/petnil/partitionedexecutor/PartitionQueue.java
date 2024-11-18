@@ -17,17 +17,17 @@ import java.util.Queue;
  * @see Partition
  * @see PartitionedExecutor
  */
-public interface PartitionQueue {
+public interface PartitionQueue<T extends PartitionedTask> {
 
     /**
      * Enqueues a {@link PartitionedTask} task into the queue.
      *
      * @param task the partitioned task to be added to the queue, must not be null
      * @return {@code true} if the task was successfully added to the queue,
-     *         {@code false} if the queue is full or if the task could not be enqueued
+     * {@code false} if the queue is full or if the task could not be enqueued
      * @throws NullPointerException if the task is null
      */
-    boolean enqueue(PartitionedTask task);
+    boolean enqueue(T task);
 
     /**
      * Retrieves and removes the next {@link PartitionedTask} task from the queue,
@@ -37,7 +37,7 @@ public interface PartitionQueue {
      * @return the next task, or {@code null} if the specified waiting time elapses before a task is available
      * @throws InterruptedException if the current thread is interrupted while waiting
      */
-    PartitionedTask getNextTask(Duration timeout) throws InterruptedException;
+    T getNextTask(Duration timeout) throws InterruptedException;
 
     /**
      * Returns a snapshot of the current tasks in the queue.
@@ -48,7 +48,7 @@ public interface PartitionQueue {
      *
      * @return a {@link Queue} containing the current {@link PartitionedTask} tasks in the queue
      */
-    Queue<PartitionedTask> getQueue();
+    Queue<T> getQueue();
 
     /**
      * Returns the current size of the task queue.
@@ -63,7 +63,7 @@ public interface PartitionQueue {
      *
      * @param callback the {@link Callback} to be removed.
      */
-    void removeCallback(Callback callback);
+    void removeCallback(Callback<T> callback);
 
     /**
      * Adds a callback to be invoked when tasks are dropped from the queue
@@ -72,20 +72,20 @@ public interface PartitionQueue {
      *
      * @param callback the {@link Callback} to be added.
      */
-    void addCallback(Callback callback);
+    void addCallback(Callback<T> callback);
 
     /**
      * The {@code Callback} interface defines a callback to handle situations
      * where a task is dropped from the queue. This can be useful for handling cases
      * where tasks are superseded by e.g. debouncing behaviour.
      */
-    interface Callback {
+    interface Callback<T extends PartitionedTask> {
         /**
          * Called when a {@link PartitionedTask} task is dropped from the queue.
          *
          * @param task the task that was dropped, must not be null
          */
-        void onDropped(PartitionedTask task);
+        void onDropped(T task);
     }
 }
 

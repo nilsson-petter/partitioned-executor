@@ -26,11 +26,11 @@ import java.util.concurrent.locks.ReentrantLock;
  * <p><b>Thread Safety:</b> The class ensures thread safety by acquiring a main lock
  * for critical sections like partition creation, task submission, and shutdown.
  */
-class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
+class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements PartitionedExecutor<T> {
 
     private final Lock mainLock = new ReentrantLock();
-    private final Map<Integer, Partition> partitions;
-    private final PartitionCreator partitionCreator;
+    private final Map<Integer, Partition<T>> partitions;
+    private final PartitionCreator<T> partitionCreator;
     private final Partitioner partitioner;
 
     private final AtomicBoolean interrupted = new AtomicBoolean();
@@ -44,7 +44,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
      * @throws NullPointerException if either {@code partitioner} or {@code partitionCreator} is null
      */
     public LazyLoadingPartitionedExecutor(Partitioner partitioner,
-                                          PartitionCreator partitionCreator) {
+                                          PartitionCreator<T> partitionCreator) {
         this.partitions = new ConcurrentHashMap<>(partitioner.getMaxNumberOfPartitions());
         this.partitioner = Objects.requireNonNull(partitioner);
         this.partitionCreator = Objects.requireNonNull(partitionCreator);
@@ -59,7 +59,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
      * @throws NullPointerException if the task is null
      */
     @Override
-    public void execute(PartitionedTask task) {
+    public void execute(T  task) {
         Objects.requireNonNull(task);
         mainLock.lock();
         try {
@@ -67,8 +67,8 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
                 int partitionNumber = partitioner.getPartition(task.getPartitionKey());
 
                 partitions.computeIfAbsent(partitionNumber, key -> {
-                    Partition createdPartition = partitionCreator.create(key);
-                    PartitionCallbackDecorator partitionCallbackDecorator = new PartitionCallbackDecorator(key);
+                    Partition<T> createdPartition = partitionCreator.create(key);
+                    PartitionCallbackDecorator<T> partitionCallbackDecorator = new PartitionCallbackDecorator<>(key);
                     createdPartition.addCallback(partitionCallbackDecorator);
                     createdPartition.start();
                     return createdPartition;
@@ -119,7 +119,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
             long remainingNanos = duration.toNanos();
             long startTime = System.nanoTime();
 
-            for (Map.Entry<Integer, Partition> partitionEntry : partitions.entrySet()) {
+            for (Map.Entry<Integer, Partition<T>> partitionEntry : partitions.entrySet()) {
                 boolean completed = partitionEntry.getValue().awaitTermination(Duration.ofNanos(remainingNanos));
                 if (!completed) {
                     return false;
@@ -146,7 +146,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
      * @return the list of partitions
      */
     @Override
-    public List<Partition> getPartitions() {
+    public List<Partition<T>> getPartitions() {
         return new ArrayList<>(partitions.values());
     }
 
@@ -157,11 +157,11 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
      * @return a map of partition indices to the remaining tasks in each partition
      */
     @Override
-    public Map<Integer, Queue<PartitionedTask>> shutdownNow() {
+    public Map<Integer, Queue<T>> shutdownNow() {
         shutdown();
         mainLock.lock();
         try {
-            HashMap<Integer, Queue<PartitionedTask>> tasksPerPartition = new HashMap<>();
+            HashMap<Integer, Queue<T>> tasksPerPartition = new HashMap<>();
             partitions.forEach((key, value) -> tasksPerPartition.put(key, value.shutdownNow()));
             return tasksPerPartition;
         } finally {
@@ -205,7 +205,7 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
         // Ensure that all partitions have completed their tasks
         mainLock.lock();
         try {
-            for (Partition partition : partitions.values()) {
+            for (Partition<T> partition : partitions.values()) {
                 if (!partition.isTerminated()) {
                     return false;
                 }
@@ -216,15 +216,15 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
         }
     }
 
-    private record PartitionCallbackDecorator(int partitionNumber) implements Partition.Callback {
+    private record PartitionCallbackDecorator<T extends PartitionedTask>(int partitionNumber) implements Partition.Callback<T> {
 
         @Override
-        public void onSuccess(PartitionedTask task) {
+        public void onSuccess(T task) {
             Partition.Callback.super.onSuccess(task);
         }
 
         @Override
-        public void onError(PartitionedTask task, Exception exception) {
+        public void onError(T task, Exception exception) {
             Partition.Callback.super.onError(task, exception);
         }
 
@@ -234,17 +234,17 @@ class LazyLoadingPartitionedExecutor implements PartitionedExecutor {
         }
 
         @Override
-        public void onRejected(PartitionedTask task) {
+        public void onRejected(T task) {
             Partition.Callback.super.onRejected(task);
         }
 
         @Override
-        public void onDropped(PartitionedTask task) {
+        public void onDropped(T task) {
             Partition.Callback.super.onDropped(task);
         }
 
         @Override
-        public void onSubmitted(PartitionedTask task) {
+        public void onSubmitted(T task) {
             Partition.Callback.super.onSubmitted(task);
         }
 

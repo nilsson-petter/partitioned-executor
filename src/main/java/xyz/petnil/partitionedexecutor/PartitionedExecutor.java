@@ -12,7 +12,7 @@ import java.util.Queue;
  * <p>Each partition can handle tasks synchronously, but tasks across different partitions
  * can execute in parallel. The routing logic is determined by the {@link Partitioner}.
  */
-public interface PartitionedExecutor extends AutoCloseable {
+public interface PartitionedExecutor<T extends PartitionedTask> extends AutoCloseable {
 
     /**
      * Executes the given partitioned task. The task will be routed to a partition based
@@ -21,7 +21,7 @@ public interface PartitionedExecutor extends AutoCloseable {
      * @param task the task to execute, must not be null
      * @throws NullPointerException if the task is null
      */
-    void execute(PartitionedTask task);
+    void execute(T task);
 
     /**
      * Returns the {@link Partitioner} used by this executor to route tasks to partitions.
@@ -52,7 +52,7 @@ public interface PartitionedExecutor extends AutoCloseable {
      *
      * @return a map of partition indices to remaining tasks that were not executed
      */
-    Map<Integer, Queue<PartitionedTask>> shutdownNow();
+    Map<Integer, Queue<T>> shutdownNow();
 
     /**
      * Returns the list of partitions currently managed by this executor. This provides insight into
@@ -60,7 +60,7 @@ public interface PartitionedExecutor extends AutoCloseable {
      *
      * @return the list of partitions managed by the executor
      */
-    List<Partition> getPartitions();
+    List<Partition<T>> getPartitions();
 
     /**
      * Returns the number of partitions created.
