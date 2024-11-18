@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
@@ -35,6 +36,8 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
 
     private final AtomicBoolean interrupted = new AtomicBoolean();
 
+    private final Set<Callback<T>> callbacks = ConcurrentHashMap.newKeySet();
+
     /**
      * Creates a {@code LazyPartitionedExecutor} with the specified partitioner
      * and partition creator.
@@ -59,7 +62,7 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
      * @throws NullPointerException if the task is null
      */
     @Override
-    public void execute(T  task) {
+    public void execute(T task) {
         Objects.requireNonNull(task);
         mainLock.lock();
         try {
@@ -68,7 +71,7 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
 
                 partitions.computeIfAbsent(partitionNumber, key -> {
                     Partition<T> createdPartition = partitionCreator.create(key);
-                    PartitionCallbackDecorator<T> partitionCallbackDecorator = new PartitionCallbackDecorator<>(key);
+                    PartitionCallbackDecorator partitionCallbackDecorator = new PartitionCallbackDecorator(key);
                     createdPartition.addCallback(partitionCallbackDecorator);
                     createdPartition.start();
                     return createdPartition;
@@ -98,6 +101,7 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
     public void shutdown() {
         mainLock.lock();
         try {
+            interrupted.set(true);
             partitions.forEach((partitionNumber, partition) -> partition.shutdown());
         } finally {
             mainLock.unlock();
@@ -216,41 +220,57 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
         }
     }
 
-    private record PartitionCallbackDecorator<T extends PartitionedTask>(int partitionNumber) implements Partition.Callback<T> {
+    @Override
+    public void registerCallback(Callback<T> callback) {
+        callbacks.add(callback);
+    }
+
+    @Override
+    public void removeCallback(Callback<T> callback) {
+        callbacks.remove(callback);
+    }
+
+    private class PartitionCallbackDecorator implements Partition.Callback<T> {
+
+        private final int partitionNumber;
+
+        public PartitionCallbackDecorator(int partitionNumber) {
+            this.partitionNumber = partitionNumber;
+        }
 
         @Override
         public void onSuccess(T task) {
-            Partition.Callback.super.onSuccess(task);
+            callbacks.forEach(c -> c.onTaskSuccess(partitionNumber, task));
         }
 
         @Override
         public void onError(T task, Exception exception) {
-            Partition.Callback.super.onError(task, exception);
+            callbacks.forEach(c -> c.onTaskError(partitionNumber, task, exception));
         }
 
         @Override
         public void onInterrupted() {
-            Partition.Callback.super.onInterrupted();
+            // TODO Missing
         }
 
         @Override
         public void onRejected(T task) {
-            Partition.Callback.super.onRejected(task);
+            callbacks.forEach(c -> c.onTaskRejected(partitionNumber, task));
         }
 
         @Override
         public void onDropped(T task) {
-            Partition.Callback.super.onDropped(task);
+            callbacks.forEach(c -> c.onTaskDropped(partitionNumber, task));
         }
 
         @Override
         public void onSubmitted(T task) {
-            Partition.Callback.super.onSubmitted(task);
+            callbacks.forEach(c -> c.onTaskSubmitted(partitionNumber, task));
         }
 
         @Override
         public void onTerminated() {
-            Partition.Callback.super.onTerminated();
+            callbacks.forEach(c -> c.onPartitionTerminated(partitionNumber));
         }
     }
 }

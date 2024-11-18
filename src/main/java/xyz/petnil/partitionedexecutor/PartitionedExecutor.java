@@ -91,7 +91,40 @@ public interface PartitionedExecutor<T extends PartitionedTask> extends AutoClos
 
     boolean isTerminated();
 
-    interface Callback {
+    void registerCallback(Callback<T> callback);
+
+    void removeCallback(Callback<T> callback);
+
+    interface Callback<T extends PartitionedTask> {
+        default void onShutdown() {
+        }
+
+        default void onTerminated() {
+        }
+
+        default void onPartitionStarted(int partitionNumber) {
+        }
+
+        default void onPartitionShutdown(int partitionNumber) {
+        }
+
+        default void onPartitionTerminated(int partitionNumber) {
+        }
+
+        default void onTaskSubmitted(int partitionNumber, T task) {
+        }
+
+        default void onTaskRejected(int partitionNumber, T task) {
+        }
+
+        default void onTaskDropped(int partitionNumber, T task) {
+        }
+
+        default void onTaskSuccess(int partitionNumber, T task) {
+        }
+
+        default void onTaskError(int partitionNumber, T task, Exception exception) {
+        }
 
     }
 }

@@ -7,14 +7,20 @@ import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class FifoPartitionQueueTest {
 
-    private FifoPartitionQueue partitionQueue;
+    private FifoPartitionQueue<PartitionedTask> partitionQueue;
 
     @BeforeEach
     void setUp() {
-        partitionQueue = new FifoPartitionQueue(3); // Queue with a capacity of 3
+        partitionQueue = new FifoPartitionQueue<>(3); // Queue with a capacity of 3
+    }
+
+    @Test
+    void negativeSize() {
+        assertThrows(IllegalArgumentException.class, () -> new FifoPartitionQueue<>(0));
     }
 
     @Test
