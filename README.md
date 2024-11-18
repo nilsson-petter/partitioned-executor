@@ -52,6 +52,58 @@ implementation 'xyz.petnil:partitioned-executor:0.0.1-SNAPSHOT'
 
 ---
 
+## Quick Start
+
+### Implement a PartitionedTask
+```java
+public record PersistStockQuoteTask(String ticker, Runnable task) implements PartitionedTask {
+    @Override
+    public Object getPartitionKey() {
+        return ticker;
+    }
+
+    @Override
+    public Runnable getDelegate() {
+        return task;
+    }
+}
+```
+
+### Create a PartitionedExecutor
+```java
+// An executor with FIFO semantics, 32 partitions and a maximum queue size of 10 000. 
+PartitionedExecutor<PersistStockQuoteTask> executor = PartitionedExecutors.fifo(32, 10_000);
+
+// Persist four stock quotes, two for AAPL and two for MSFT.
+var task1 = new PersistStockQuoteTask("AAPL", () -> persistQuote("AAPL", BigDecimal.valueOf(130.3d)));
+var task2 = new PersistStockQuoteTask("MSFT", () -> persistQuote("MSFT", BigDecimal.valueOf(209.83d)));
+var task3 = new PersistStockQuoteTask("MSFT", () -> persistQuote("MSFT", BigDecimal.valueOf(208.51d)));
+var task4 = new PersistStockQuoteTask("AAPL", () -> persistQuote("AAPL", BigDecimal.valueOf(131.3d)));
+executor.execute(task1);
+executor.execute(task2);
+executor.execute(task3);
+executor.execute(task4);
+
+// Graceful shutdown
+executor.close();
+...
+...
+private void persistQuote(String ticker, BigDecimal lastPrice) {
+    System.out.println(Thread.currentThread().getName() + "|" + ticker + "|" + lastPrice);
+}
+```
+
+### Output
+```text
+SingleThreadedPartitionWorker-20|MSFT|209.83
+SingleThreadedPartitionWorker-20|MSFT|208.51
+SingleThreadedPartitionWorker-28|AAPL|130.3
+SingleThreadedPartitionWorker-28|AAPL|131.3
+```
+Tasks for "AAPL" runs synchronously in partition #28. In parallel, tasks for "MSFT" runs in partition #20. 
+
+---
+
 ## License
 
 This library is licensed under the [MIT License](LICENSE).
