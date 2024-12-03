@@ -6,7 +6,7 @@ on:
       - main
       - develop
     tags:
-      - 'v*.*.*'  # This runs the workflow when a tag like v1.0.0 is pushed.
+      - 'v*.*.*'  # Runs the workflow when a tag like v1.0.0 is pushed.
 
   pull_request:
     branches:
@@ -27,7 +27,6 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-
       - name: Cache Maven packages
         uses: actions/cache@v3
         with:
@@ -43,7 +42,7 @@ jobs:
         run: mvn test
 
   publish:
-    needs: build  # Only run this job if the build is successful
+    needs: build
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
@@ -51,16 +50,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up JDK 11
+      - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
-          distribution: 'adopt'
-          java-version: '11'
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Import GPG key
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
 
       - name: Build and Publish to Maven Central
-        run: mvn clean deploy --batch-mode -P release
+        run: mvn clean deploy --batch-mode -P release -DskipTests
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}

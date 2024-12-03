@@ -31,3 +31,4 @@ target/
 *.war
 *.ear
 /compiler.xml
+/.env
