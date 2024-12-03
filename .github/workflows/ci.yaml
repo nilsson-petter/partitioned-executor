@@ -35,11 +35,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven
 
-      - name: Build with Maven
+      - name: Build and Test with Maven
         run: mvn clean install -P release --batch-mode
-
-      - name: Run tests
-        run: mvn test
 
   publish:
     needs: build
