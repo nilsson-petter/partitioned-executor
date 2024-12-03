@@ -35,8 +35,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven
 
+      - name: Import GPG key
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+
       - name: Build and Test with Maven
         run: mvn clean install -P release --batch-mode
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
   publish:
     needs: build
