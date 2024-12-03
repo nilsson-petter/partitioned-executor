@@ -36,10 +36,10 @@ jobs:
             ${{ runner.os }}-maven
 
       - name: Build and Test with Maven
-        run: mvn clean install -P release --batch-mode
+        run: mvn clean install -P sign --batch-mode
         env:
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+          GPG_PRIVATE_KEY: ${{ secrets.MAVEN_GPG_KEY }}
 
   publish:
     needs: build
@@ -56,14 +56,10 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Import GPG key
-        run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-
       - name: Build and Publish to Maven Central
-        run: mvn clean deploy --batch-mode -P release -DskipTests
+        run: mvn clean deploy --batch-mode -P sign -DskipTests
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+          GPG_PRIVATE_KEY: ${{ secrets.MAVEN_GPG_KEY }}
