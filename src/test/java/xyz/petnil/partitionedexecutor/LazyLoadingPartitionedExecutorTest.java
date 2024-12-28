@@ -14,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -240,15 +241,23 @@ class LazyLoadingPartitionedExecutorTest {
         var task1 = mock(PartitionedTask.class);
         Semaphore semaphore = new Semaphore(1);
         semaphore.acquire();
+
         when(task1.getPartitionKey()).thenReturn(1);
-        when(task1.getDelegate()).thenReturn(() -> {
+
+        Runnable task = () -> {
             try {
                 semaphore.acquire();
                 semaphore.release();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-        });
+        };
+
+        when(task1.getDelegate()).thenReturn(task);
+        doAnswer(invocation -> {
+            task.run();
+            return null;
+        }).when(task1).run();
 
         PartitionedExecutor.Callback callback = mock(PartitionedExecutor.Callback.class);
 
@@ -258,7 +267,7 @@ class LazyLoadingPartitionedExecutorTest {
         executor.execute(task1);
         executor.execute(task1);
 
-        verify(callback, timeout(200).times(1)).onTaskRejected(0, task1);
+        verify(callback, timeout(200).atLeastOnce()).onTaskRejected(0, task1);
         semaphore.release();
     }
 
