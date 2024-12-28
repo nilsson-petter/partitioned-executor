@@ -94,7 +94,7 @@ class SingleThreadedPartitionWorker<T extends PartitionedTask> implements Partit
 
     private void safeGuardedRun(T task) {
         try {
-            task.getDelegate().run();
+            task.run();
             onSuccess(task);
         } catch (Exception e) {
             onError(task, e);
