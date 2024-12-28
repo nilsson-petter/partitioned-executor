@@ -80,13 +80,16 @@ class SingleThreadedPartitionWorker<T extends PartitionedTask> implements Partit
                     safeGuardedRun(nextTask);
                 }
             } catch (InterruptedException e) {
-                setState(State.TERMINATED, this::onInterrupted);
+                computeState(State.RUNNING, State.TERMINATED, () -> {
+                    onInterrupted();
+                    onTerminated();
+                });
                 Thread.currentThread().interrupt();
                 break;
             }
         }
 
-        setState(State.TERMINATED, this::onTerminated);
+        computeState(State.SHUTDOWN, State.TERMINATED, this::onTerminated);
     }
 
     private void safeGuardedRun(T task) {

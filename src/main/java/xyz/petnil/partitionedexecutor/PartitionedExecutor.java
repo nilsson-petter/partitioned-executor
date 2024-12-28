@@ -91,7 +91,7 @@ public interface PartitionedExecutor<T extends PartitionedTask> extends AutoClos
 
     boolean isTerminated();
 
-    void registerCallback(Callback<T> callback);
+    void addCallback(Callback<T> callback);
 
     void removeCallback(Callback<T> callback);
 

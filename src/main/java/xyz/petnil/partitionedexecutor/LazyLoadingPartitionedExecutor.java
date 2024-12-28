@@ -221,7 +221,7 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
     }
 
     @Override
-    public void registerCallback(Callback<T> callback) {
+    public void addCallback(Callback<T> callback) {
         callbacks.add(callback);
     }
 
@@ -271,6 +271,16 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
         @Override
         public void onTerminated() {
             callbacks.forEach(c -> c.onPartitionTerminated(partitionNumber));
+        }
+
+        @Override
+        public void onStarted() {
+            callbacks.forEach(c -> c.onPartitionStarted(partitionNumber));
+        }
+
+        @Override
+        public void onShutdown() {
+            callbacks.forEach(c -> c.onPartitionShutdown(partitionNumber));
         }
     }
 }
