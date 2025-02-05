@@ -150,12 +150,6 @@ class SingleThreadedPartitionWorker<T extends PartitionedTask> implements Partit
         }
     }
 
-    private void setState(State newState, Runnable postStateTask) {
-        state.set(newState);
-        postStateTask.run();
-    }
-
-
     private void computeState(State expectedState, State newState, Runnable postStateTask) {
         if (state.compareAndSet(expectedState, newState)) {
             postStateTask.run();

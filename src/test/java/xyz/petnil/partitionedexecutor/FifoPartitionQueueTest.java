@@ -90,7 +90,7 @@ class FifoPartitionQueueTest {
     @Test
     void shouldReturnNullWhenTimeoutExpiresWithoutTask() throws InterruptedException {
         // When
-        PartitionedTask nextTask = partitionQueue.getNextTask(Duration.ofMillis(500));
+        PartitionedTask nextTask = partitionQueue.getNextTask(Duration.ofMillis(1));
 
         // Then
         assertThat(nextTask).isNull(); // No tasks, should return null

@@ -111,6 +111,9 @@ public interface PartitionedExecutor<T extends PartitionedTask> extends AutoClos
         default void onPartitionTerminated(int partitionNumber) {
         }
 
+        default void onPartitionInterrupted(int partitionNumber) {
+        }
+
         default void onTaskSubmitted(int partitionNumber, T task) {
         }
 

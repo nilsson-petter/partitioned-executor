@@ -39,7 +39,7 @@ public class PartitionedExecutorBuilder<T extends PartitionedTask> {
         private final PartitionedExecutorBuilder<T> parentBuilder;
         private PartitionThreadFactoryCreator threadFactory;
         private String threadNamePrefix = "SingleThreadedPartitionWorker";
-        private PartitionQueueCreator<T> partitionQueueCreator = () -> PartitionQueues.<T>fifo(Integer.MAX_VALUE);
+        private PartitionQueueCreator<T> partitionQueueCreator = () -> PartitionQueues.fifo(Integer.MAX_VALUE);
 
         private PartitionCreatorBuilder(PartitionedExecutorBuilder<T> parentBuilder) {
             this.parentBuilder = parentBuilder;

@@ -250,7 +250,7 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
 
         @Override
         public void onInterrupted() {
-            // TODO Missing
+            callbacks.forEach(c -> c.onPartitionInterrupted(partitionNumber));
         }
 
         @Override
@@ -271,6 +271,9 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
         @Override
         public void onTerminated() {
             callbacks.forEach(c -> c.onPartitionTerminated(partitionNumber));
+            if (partitions.values().stream().allMatch(Partition::isTerminated)) {
+                callbacks.forEach(Callback::onTerminated);
+            }
         }
 
         @Override
@@ -281,6 +284,9 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
         @Override
         public void onShutdown() {
             callbacks.forEach(c -> c.onPartitionShutdown(partitionNumber));
+            if (partitions.values().stream().allMatch(Partition::isShutdown)) {
+                callbacks.forEach(Callback::onShutdown);
+            }
         }
     }
 }
