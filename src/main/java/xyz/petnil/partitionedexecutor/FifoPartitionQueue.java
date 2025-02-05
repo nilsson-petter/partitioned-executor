@@ -1,11 +1,9 @@
 package xyz.petnil.partitionedexecutor;
 
-import java.time.Duration;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 class FifoPartitionQueue<T extends PartitionedTask> implements PartitionQueue<T> {
     private final LinkedBlockingQueue<T> taskQueue;
@@ -30,9 +28,8 @@ class FifoPartitionQueue<T extends PartitionedTask> implements PartitionQueue<T>
     }
 
     @Override
-    public T getNextTask(Duration timeout) throws InterruptedException {
-        Objects.requireNonNull(timeout);
-        return taskQueue.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
+    public T getNextTask() throws InterruptedException {
+        return taskQueue.take();
     }
 
     @Override

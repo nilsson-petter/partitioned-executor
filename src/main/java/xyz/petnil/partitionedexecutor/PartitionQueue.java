@@ -1,6 +1,5 @@
 package xyz.petnil.partitionedexecutor;
 
-import java.time.Duration;
 import java.util.Queue;
 
 /**
@@ -31,13 +30,12 @@ public interface PartitionQueue<T extends PartitionedTask> {
 
     /**
      * Retrieves and removes the next {@link PartitionedTask} task from the queue,
-     * waiting for the specified timeout if necessary for a task to become available.
+     * waiting until a tasks becomes available.
      *
-     * @param timeout the maximum time to wait for a task, must not be null
-     * @return the next task, or {@code null} if the specified waiting time elapses before a task is available
+     * @return the next task
      * @throws InterruptedException if the current thread is interrupted while waiting
      */
-    T getNextTask(Duration timeout) throws InterruptedException;
+    T getNextTask() throws InterruptedException;
 
     /**
      * Returns a snapshot of the current tasks in the queue.

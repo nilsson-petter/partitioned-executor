@@ -3,8 +3,6 @@ package xyz.petnil.partitionedexecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -73,34 +71,18 @@ class FifoPartitionQueueTest {
     }
 
     @Test
-    void shouldRetrieveTaskWithTimeout() throws InterruptedException {
+    void shouldRetrieveTask() throws InterruptedException {
         // Given
         PartitionedTask task = createTask("key1");
         partitionQueue.enqueue(task);
 
         // When
-        PartitionedTask nextTask = partitionQueue.getNextTask(Duration.ofMillis(500));
+        PartitionedTask nextTask = partitionQueue.getNextTask();
 
         // Then
         assertThat(nextTask).isNotNull();
         assertThat(nextTask.getPartitionKey()).isEqualTo("key1");
         assertThat(partitionQueue.getQueueSize()).isEqualTo(0); // Queue should be empty
-    }
-
-    @Test
-    void shouldReturnNullWhenTimeoutExpiresWithoutTask() throws InterruptedException {
-        // When
-        PartitionedTask nextTask = partitionQueue.getNextTask(Duration.ofMillis(1));
-
-        // Then
-        assertThat(nextTask).isNull(); // No tasks, should return null
-    }
-
-    @Test
-    void shouldThrowExceptionWhenTimeoutIsNull() {
-        // Given / When / Then
-        assertThatThrownBy(() -> partitionQueue.getNextTask(null))
-                .isInstanceOf(NullPointerException.class);
     }
 
     @Test

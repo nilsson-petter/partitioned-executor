@@ -76,7 +76,7 @@ class SingleThreadedPartitionWorkerTest {
 
     @Test
     void testPollAndProcessSuccess() throws InterruptedException {
-        when(mockQueue.getNextTask(any())).thenReturn(mockTask, (PartitionedTask) null);
+        when(mockQueue.getNextTask()).thenReturn(mockTask, (PartitionedTask) null);
 
         worker.start();
 
@@ -115,7 +115,7 @@ class SingleThreadedPartitionWorkerTest {
     @Test
     void testCallbackOnError() throws InterruptedException {
         doThrow(new RuntimeException("Task failed")).when(mockTask).run();
-        when(mockQueue.getNextTask(any())).thenReturn(mockTask, (PartitionedTask) null);
+        when(mockQueue.getNextTask()).thenReturn(mockTask, (PartitionedTask) null);
         worker.start();
         verify(mockCallback, timeout(1000)).onError(eq(mockTask), any(RuntimeException.class));
     }
@@ -136,6 +136,18 @@ class SingleThreadedPartitionWorkerTest {
 
         verify(mockCallback, timeout(1000).times(1)).onInterrupted();
         verify(mockCallback, timeout(1000).times(1)).onTerminated();
+    }
+
+    @Test
+    void interruptPolling() throws Exception {
+        var partitionWorker = new SingleThreadedPartitionWorker<>(PartitionQueues.fifo(Integer.MAX_VALUE), Thread.ofPlatform().daemon().name("test").factory());
+        Partition.Callback callback = mock(Partition.Callback.class);
+        partitionWorker.addCallback(callback);
+        partitionWorker.start();
+        partitionWorker.close();
+        verify(callback).onShutdown();
+        verify(callback).onInterrupted();
+        verify(callback).onTerminated();
     }
 
     @Test

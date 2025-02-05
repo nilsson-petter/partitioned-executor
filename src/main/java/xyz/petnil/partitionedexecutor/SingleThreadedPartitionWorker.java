@@ -70,7 +70,7 @@ class SingleThreadedPartitionWorker<T extends PartitionedTask> implements Partit
     private void pollAndProcess() {
         while (true) {
             try {
-                T nextTask = partitionQueue.getNextTask(Duration.ofSeconds(5));
+                T nextTask = partitionQueue.getNextTask();
                 State s = state.get();
                 if ((s == State.SHUTDOWN || s == State.TERMINATED) && nextTask == null) {
                     break;
@@ -84,6 +84,12 @@ class SingleThreadedPartitionWorker<T extends PartitionedTask> implements Partit
                     onInterrupted();
                     onTerminated();
                 });
+
+                computeState(State.SHUTDOWN, State.TERMINATED, () -> {
+                    onInterrupted();
+                    onTerminated();
+                });
+
                 Thread.currentThread().interrupt();
                 break;
             }
@@ -201,6 +207,9 @@ class SingleThreadedPartitionWorker<T extends PartitionedTask> implements Partit
     }
 
     private void onShutdown() {
+        if (partitionQueue.getQueueSize() == 0 && thread != null) {
+            thread.interrupt();
+        }
         callback(Callback::onShutdown);
     }
 

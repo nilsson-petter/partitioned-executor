@@ -61,7 +61,7 @@ class TrailingThrottledPartitionQueueTest {
                 .containsValue(secondTask)
                 .containsKey(partitionKey);
 
-        PartitionedTask firstInQueue = trailingThrottledPartitionQueue.getNextTask(Duration.ofSeconds(1));
+        PartitionedTask firstInQueue = trailingThrottledPartitionQueue.getNextTask();
         assertEquals(secondTask, firstInQueue);
 
         verify(callback, times(1)).onDropped(firstTask);
@@ -71,24 +71,9 @@ class TrailingThrottledPartitionQueueTest {
     void getNextTask_shouldReturnTask_whenAvailable() throws InterruptedException {
         when(throttlingFunction.getThrottlingInterval(any())).thenReturn(Duration.ofMillis(20));
         trailingThrottledPartitionQueue.enqueue(mockTask);
-        PartitionedTask retrievedTask = trailingThrottledPartitionQueue.getNextTask(Duration.ofMillis(40));
+        PartitionedTask retrievedTask = trailingThrottledPartitionQueue.getNextTask();
         assertThat(retrievedTask).isEqualTo(mockTask);
         assertThat(trailingThrottledPartitionQueue.getQueueSize()).isEqualTo(0);
-    }
-
-    @Test
-    void getNextTask_shouldReturnNull_whenNoTaskAvailable() throws InterruptedException {
-        PartitionedTask retrievedTask = trailingThrottledPartitionQueue.getNextTask(Duration.ofMillis(100));
-        assertThat(retrievedTask).isNull();
-    }
-
-    @Test
-    void getNextTask_shouldReturnNull_whenNotAvailableYet() throws InterruptedException {
-        when(throttlingFunction.getThrottlingInterval(any())).thenReturn(Duration.ofDays(1));
-        trailingThrottledPartitionQueue.enqueue(mockTask);
-        PartitionedTask retrievedTask = trailingThrottledPartitionQueue.getNextTask(Duration.ofMillis(1));
-        // Assert
-        assertThat(retrievedTask).isNull();
     }
 
     @Test
