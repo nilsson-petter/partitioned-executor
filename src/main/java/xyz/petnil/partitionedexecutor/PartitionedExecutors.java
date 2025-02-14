@@ -22,15 +22,17 @@ public class PartitionedExecutors {
      * <p>Example usage:
      * <pre>{@code
      * PartitionedExecutor<MyTask> executor = PartitionedExecutor.fifo(10, 100);
-     * executor.submit(myTask);
+     * executor.execute(myTask);
      * }</pre>
      */
     public static <T extends PartitionedTask> PartitionedExecutor<T> fifo(int maxPartitions, int maxQueueSize) {
-        return PartitionedExecutorBuilder.<T>newBuilder(maxPartitions)
-                .withPartitioner(getPartitioner(maxPartitions))
-                .configurePartitionCreator()
-                .withPartitionQueueCreator(() -> PartitionQueues.fifo(maxQueueSize))
-                .buildPartitionCreator()
+
+        return PartitionedExecutorBuilder.<T>newBuilder()
+                .withPartitioner(getPartitioner2(maxPartitions))
+                .withPartitionCreator(i -> new SingleThreadedPartitionWorker<>(
+                        PartitionQueues.fifo(maxQueueSize),
+                        Thread.ofPlatform().name("partition-" + i).factory()
+                ))
                 .build();
     }
 
@@ -56,21 +58,25 @@ public class PartitionedExecutors {
      * <pre>{@code
      * ThrottlingFunction throttlingFunction = o -> Duration.ofMillis(100);
      * PartitionedExecutor<MyTask> executor = PartitionedExecutor.trailingThrottled(10, throttlingFunction);
-     * executor.submit(myTask);
+     * executor.execute(myTask);
      * }</pre>
      */
     public static <T extends PartitionedTask> PartitionedExecutor<T> trailingThrottled(int maxPartitions, ThrottlingFunction throttlingFunction) {
-        return PartitionedExecutorBuilder.<T>newBuilder(maxPartitions)
-                .withPartitioner(getPartitioner(maxPartitions))
-                .configurePartitionCreator()
-                .withPartitionQueueCreator(() -> PartitionQueues.trailingThrottled(throttlingFunction))
-                .buildPartitionCreator()
+        return PartitionedExecutorBuilder.<T>newBuilder()
+                .withPartitioner(getPartitioner2(maxPartitions))
+                .withPartitionCreator(i -> new SingleThreadedPartitionWorker<>(
+                        PartitionQueues.trailingThrottled(throttlingFunction),
+                        Thread.ofPlatform().name("partition-" + i).factory()
+                ))
                 .build();
     }
 
 
-    private static PartitionerCreator getPartitioner(int maxPartitions) {
-        return PowerOfTwo.isPowerOfTwo(maxPartitions) ? Partitioners::powerOfTwo : Partitioners::generalPurpose;
+
+    private static Partitioner getPartitioner2(int maxPartitions) {
+        return PowerOfTwo.isPowerOfTwo(maxPartitions) ?
+                Partitioners.powerOfTwo(maxPartitions) :
+                Partitioners.generalPurpose(maxPartitions);
     }
 
 }
