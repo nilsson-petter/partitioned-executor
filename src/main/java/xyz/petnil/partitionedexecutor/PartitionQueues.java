@@ -8,7 +8,7 @@ public class PartitionQueues {
         return new FifoPartitionQueue<>(capacity);
     }
 
-    public static <T extends PartitionedTask> PartitionQueue<T> trailingThrottled(ThrottlingFunction throttlingFunction) {
-        return new TrailingThrottledPartitionQueue<>(throttlingFunction);
+    public static <T extends PartitionedTask> PartitionQueue<T> throttled(ThrottlingFunction throttlingFunction) {
+        return new ThrottledPartitionQueue<>(throttlingFunction);
     }
 }

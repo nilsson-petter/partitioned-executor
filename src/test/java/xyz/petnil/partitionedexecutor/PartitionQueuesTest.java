@@ -3,7 +3,6 @@ package xyz.petnil.partitionedexecutor;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.Comparator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,11 +16,11 @@ class PartitionQueuesTest {
     }
 
     @Test
-    void trailingThrottled() {
+    void throttles() {
         ThrottlingFunction throttlingFunction = o -> Duration.ZERO;
-        PartitionQueue<PartitionedTask> partitionQueue = PartitionQueues.trailingThrottled(throttlingFunction);
-        assertThat(partitionQueue).isInstanceOf(TrailingThrottledPartitionQueue.class);
-        assertThat(((TrailingThrottledPartitionQueue<?>) partitionQueue).getThrottlingFunction()).isEqualTo(throttlingFunction);
+        PartitionQueue<PartitionedTask> partitionQueue = PartitionQueues.throttled(throttlingFunction);
+        assertThat(partitionQueue).isInstanceOf(ThrottledPartitionQueue.class);
+        assertThat(((ThrottledPartitionQueue<?>) partitionQueue).getThrottlingFunction()).isEqualTo(throttlingFunction);
     }
 
 }

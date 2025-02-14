@@ -28,7 +28,7 @@ public class PartitionedExecutors {
     public static <T extends PartitionedTask> PartitionedExecutor<T> fifo(int maxPartitions, int maxQueueSize) {
 
         return PartitionedExecutorBuilder.<T>newBuilder()
-                .withPartitioner(getPartitioner2(maxPartitions))
+                .withPartitioner(getPartitioner(maxPartitions))
                 .withPartitionCreator(i -> new SingleThreadedPartitionWorker<>(
                         PartitionQueues.fifo(maxQueueSize),
                         Thread.ofPlatform().name("partition-" + i).factory()
@@ -38,18 +38,20 @@ public class PartitionedExecutors {
 
 
     /**
-     * Creates a {@link PartitionedExecutor} with a trailing throttling strategy for partition queues.
+     * Creates a {@link PartitionedExecutor} with a throttling strategy for partition queues.
      *
      * <p>This method configures a partitioned executor where tasks within a partition are throttled
      * based on a {@link ThrottlingFunction}. This ensures that tasks are processed sequentially within
      * their respective partitions, but with control over the task rate or delay as defined by the
      * throttling function.
+     *<p>
+     * The last task submitted is guaranteed to be processed.
      *
      * @param <T>                 the type of task that extends {@link PartitionedTask}
      * @param maxPartitions       the maximum number of partitions allowed in the executor
      * @param throttlingFunction  a {@link ThrottlingFunction} defining how tasks are throttled in each partition
      * @return a {@link PartitionedExecutor} configured with the specified number of partitions
-     *         and trailing throttling strategy
+     *         and throttling strategy
      *
      * @throws IllegalArgumentException if {@code maxPartitions} is non-positive
      * @throws NullPointerException if {@code throttlingFunction} is null
@@ -57,23 +59,22 @@ public class PartitionedExecutors {
      * <p>Example usage:
      * <pre>{@code
      * ThrottlingFunction throttlingFunction = o -> Duration.ofMillis(100);
-     * PartitionedExecutor<MyTask> executor = PartitionedExecutor.trailingThrottled(10, throttlingFunction);
+     * PartitionedExecutor<MyTask> executor = PartitionedExecutor.throttled(10, throttlingFunction);
      * executor.execute(myTask);
      * }</pre>
      */
-    public static <T extends PartitionedTask> PartitionedExecutor<T> trailingThrottled(int maxPartitions, ThrottlingFunction throttlingFunction) {
+    public static <T extends PartitionedTask> PartitionedExecutor<T> throttled(int maxPartitions, ThrottlingFunction throttlingFunction) {
         return PartitionedExecutorBuilder.<T>newBuilder()
-                .withPartitioner(getPartitioner2(maxPartitions))
+                .withPartitioner(getPartitioner(maxPartitions))
                 .withPartitionCreator(i -> new SingleThreadedPartitionWorker<>(
-                        PartitionQueues.trailingThrottled(throttlingFunction),
+                        PartitionQueues.throttled(throttlingFunction),
                         Thread.ofPlatform().name("partition-" + i).factory()
                 ))
                 .build();
     }
 
 
-
-    private static Partitioner getPartitioner2(int maxPartitions) {
+    private static Partitioner getPartitioner(int maxPartitions) {
         return PowerOfTwo.isPowerOfTwo(maxPartitions) ?
                 Partitioners.powerOfTwo(maxPartitions) :
                 Partitioners.generalPurpose(maxPartitions);

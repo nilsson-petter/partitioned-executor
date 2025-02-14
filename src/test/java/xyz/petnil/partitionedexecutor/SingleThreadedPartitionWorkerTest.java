@@ -28,22 +28,22 @@ import static org.mockito.Mockito.when;
 
 class SingleThreadedPartitionWorkerTest {
 
-    private SingleThreadedPartitionWorker worker;
+    private SingleThreadedPartitionWorker<PartitionedTask> worker;
 
     @Mock
-    private PartitionQueue mockQueue;
+    private PartitionQueue<PartitionedTask> mockQueue;
 
     @Mock
     private PartitionedTask mockTask;
     @Mock
-    private SingleThreadedPartitionWorker.Callback mockCallback;
+    private SingleThreadedPartitionWorker.Callback<PartitionedTask> mockCallback;
 
     @BeforeEach
     void setUp() throws InterruptedException {
         MockitoAnnotations.openMocks(this);
         ThreadFactory factory = Thread.ofVirtual().factory();
         when(mockQueue.enqueue(any())).thenReturn(true);
-        worker = new SingleThreadedPartitionWorker(mockQueue, factory);
+        worker = new SingleThreadedPartitionWorker<>(mockQueue, factory);
         worker.addCallback(mockCallback);
     }
 
@@ -129,7 +129,7 @@ class SingleThreadedPartitionWorkerTest {
             return start;
         };
 
-        var partitionWorker = new SingleThreadedPartitionWorker(PartitionQueues.fifo(Integer.MAX_VALUE), tf);
+        var partitionWorker = new SingleThreadedPartitionWorker<>(PartitionQueues.fifo(Integer.MAX_VALUE), tf);
         partitionWorker.addCallback(mockCallback);
         partitionWorker.start();
         workerThread.get().interrupt();
@@ -141,7 +141,7 @@ class SingleThreadedPartitionWorkerTest {
     @Test
     void interruptPolling() throws Exception {
         var partitionWorker = new SingleThreadedPartitionWorker<>(PartitionQueues.fifo(Integer.MAX_VALUE), Thread.ofPlatform().daemon().name("test").factory());
-        Partition.Callback callback = mock(Partition.Callback.class);
+        Partition.Callback<PartitionedTask> callback = mock(Partition.Callback.class);
         partitionWorker.addCallback(callback);
         partitionWorker.start();
         partitionWorker.close();
@@ -157,8 +157,8 @@ class SingleThreadedPartitionWorkerTest {
 
     @Test
     void multipleCallbacks() {
-        var cb1 = mock(Partition.Callback.class);
-        var cb2 = mock(Partition.Callback.class);
+        Partition.Callback<PartitionedTask> cb1 = mock(Partition.Callback.class);
+        Partition.Callback<PartitionedTask> cb2 = mock(Partition.Callback.class);
         worker.addCallback(cb1);
         worker.addCallback(cb2);
         worker.start();

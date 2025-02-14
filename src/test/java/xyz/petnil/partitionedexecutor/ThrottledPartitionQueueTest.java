@@ -16,9 +16,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-class TrailingThrottledPartitionQueueTest {
+class ThrottledPartitionQueueTest {
     private static final String PARTITION_KEY = "AAPL";
-    private TrailingThrottledPartitionQueue trailingThrottledPartitionQueue;
+    private ThrottledPartitionQueue<PartitionedTask> throttledPartitionQueue;
     private ThrottlingFunction throttlingFunction;
     private PartitionedTask mockTask;
 
@@ -28,14 +28,14 @@ class TrailingThrottledPartitionQueueTest {
         when(throttlingFunction.getThrottlingInterval(any())).thenReturn(Duration.ofMillis(50));
         mockTask = mock(PartitionedTask.class);
         when(mockTask.getPartitionKey()).thenReturn(PARTITION_KEY);
-        trailingThrottledPartitionQueue = new TrailingThrottledPartitionQueue(throttlingFunction);
+        throttledPartitionQueue = new ThrottledPartitionQueue<>(throttlingFunction);
     }
 
     @Test
     void enqueue_shouldAddTask_whenNewPartitionKey() {
-        boolean result = trailingThrottledPartitionQueue.enqueue(mockTask);
+        boolean result = throttledPartitionQueue.enqueue(mockTask);
         assertThat(result).isTrue();
-        assertThat(trailingThrottledPartitionQueue.getQueueSize()).isEqualTo(1);
+        assertThat(throttledPartitionQueue.getQueueSize()).isEqualTo(1);
     }
 
     @Test
@@ -45,23 +45,23 @@ class TrailingThrottledPartitionQueueTest {
         PartitionedTask secondTask = mock(PartitionedTask.class);
         when(firstTask.getPartitionKey()).thenReturn(partitionKey);
         when(secondTask.getPartitionKey()).thenReturn(partitionKey);
-        PartitionQueue.Callback callback = mock(PartitionQueue.Callback.class);
-        trailingThrottledPartitionQueue.addCallback(callback);
+        PartitionQueue.Callback<PartitionedTask> callback = mock(PartitionQueue.Callback.class);
+        throttledPartitionQueue.addCallback(callback);
 
         // Enqueue both tasks
-        trailingThrottledPartitionQueue.enqueue(firstTask);
-        boolean result = trailingThrottledPartitionQueue.enqueue(secondTask);
+        throttledPartitionQueue.enqueue(firstTask);
+        boolean result = throttledPartitionQueue.enqueue(secondTask);
 
         // Assert
         assertThat(result).isTrue();
-        assertThat(trailingThrottledPartitionQueue.getQueueSize()).isEqualTo(1); // Only the new task should remain
+        assertThat(throttledPartitionQueue.getQueueSize()).isEqualTo(1); // Only the new task should remain
 
-        assertThat(trailingThrottledPartitionQueue.getState())
+        assertThat(throttledPartitionQueue.getState())
                 .hasSize(1)
                 .containsValue(secondTask)
                 .containsKey(partitionKey);
 
-        PartitionedTask firstInQueue = trailingThrottledPartitionQueue.getNextTask();
+        PartitionedTask firstInQueue = throttledPartitionQueue.getNextTask();
         assertEquals(secondTask, firstInQueue);
 
         verify(callback, times(1)).onDropped(firstTask);
@@ -70,16 +70,16 @@ class TrailingThrottledPartitionQueueTest {
     @Test
     void getNextTask_shouldReturnTask_whenAvailable() throws InterruptedException {
         when(throttlingFunction.getThrottlingInterval(any())).thenReturn(Duration.ofMillis(20));
-        trailingThrottledPartitionQueue.enqueue(mockTask);
-        PartitionedTask retrievedTask = trailingThrottledPartitionQueue.getNextTask();
+        throttledPartitionQueue.enqueue(mockTask);
+        PartitionedTask retrievedTask = throttledPartitionQueue.getNextTask();
         assertThat(retrievedTask).isEqualTo(mockTask);
-        assertThat(trailingThrottledPartitionQueue.getQueueSize()).isEqualTo(0);
+        assertThat(throttledPartitionQueue.getQueueSize()).isEqualTo(0);
     }
 
     @Test
     void getQueueSize_shouldReturnCorrectSize() {
-        trailingThrottledPartitionQueue.enqueue(mockTask);
-        assertThat(trailingThrottledPartitionQueue.getQueueSize()).isEqualTo(1);
+        throttledPartitionQueue.enqueue(mockTask);
+        assertThat(throttledPartitionQueue.getQueueSize()).isEqualTo(1);
     }
 
     @Test
@@ -91,12 +91,12 @@ class TrailingThrottledPartitionQueueTest {
             PartitionedTask task = mock(PartitionedTask.class);
             when(task.getPartitionKey()).thenReturn(i);
             expectedList.add(task);
-            trailingThrottledPartitionQueue.enqueue(task);
+            throttledPartitionQueue.enqueue(task);
         }
 
         // Assert
-        assertThat(trailingThrottledPartitionQueue.getQueueSize()).isEqualTo(10);
-        assertThat(trailingThrottledPartitionQueue.getQueue()).hasSize(10).containsSequence(expectedList);
+        assertThat(throttledPartitionQueue.getQueueSize()).isEqualTo(10);
+        assertThat(throttledPartitionQueue.getQueue()).hasSize(10).containsSequence(expectedList);
     }
 
     @Test
@@ -109,15 +109,15 @@ class TrailingThrottledPartitionQueueTest {
         when(secondTask.getPartitionKey()).thenReturn(partitionKey);
         when(thirdTask.getPartitionKey()).thenReturn(partitionKey);
 
-        PartitionQueue.Callback callback = mock(PartitionQueue.Callback.class);
-        trailingThrottledPartitionQueue.addCallback(callback);
+        PartitionQueue.Callback<PartitionedTask> callback = mock(PartitionQueue.Callback.class);
+        throttledPartitionQueue.addCallback(callback);
 
-        trailingThrottledPartitionQueue.enqueue(firstTask);
-        trailingThrottledPartitionQueue.enqueue(secondTask);
+        throttledPartitionQueue.enqueue(firstTask);
+        throttledPartitionQueue.enqueue(secondTask);
         verify(callback, times(1)).onDropped(firstTask);
 
-        trailingThrottledPartitionQueue.removeCallback(callback);
-        trailingThrottledPartitionQueue.enqueue(thirdTask);
+        throttledPartitionQueue.removeCallback(callback);
+        throttledPartitionQueue.enqueue(thirdTask);
 
         verifyNoMoreInteractions(callback);
     }

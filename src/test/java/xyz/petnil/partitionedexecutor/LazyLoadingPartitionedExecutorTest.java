@@ -194,7 +194,7 @@ class LazyLoadingPartitionedExecutorTest {
         when(task4.getDelegate()).thenReturn(() -> {
         });
 
-        PartitionedExecutor.Callback callback = mock(PartitionedExecutor.Callback.class);
+        PartitionedExecutor.Callback<PartitionedTask> callback = mock(PartitionedExecutor.Callback.class);
 
         var executor = PartitionedExecutors.fifo(4, 1);
         executor.addCallback(callback);
@@ -226,7 +226,7 @@ class LazyLoadingPartitionedExecutorTest {
         when(task1.getDelegate()).thenReturn(() -> {
         });
 
-        PartitionedExecutor.Callback callback = mock(PartitionedExecutor.Callback.class);
+        PartitionedExecutor.Callback<PartitionedTask> callback = mock(PartitionedExecutor.Callback.class);
 
         var executor = PartitionedExecutors.fifo(4, 1);
         executor.addCallback(callback);
@@ -259,7 +259,7 @@ class LazyLoadingPartitionedExecutorTest {
             return null;
         }).when(task1).run();
 
-        PartitionedExecutor.Callback callback = mock(PartitionedExecutor.Callback.class);
+        PartitionedExecutor.Callback<PartitionedTask> callback = mock(PartitionedExecutor.Callback.class);
 
         var executor = PartitionedExecutors.fifo(1, 1);
         executor.addCallback(callback);
@@ -286,8 +286,8 @@ class LazyLoadingPartitionedExecutorTest {
             }
         });
 
-        PartitionedExecutor.Callback callback = mock(PartitionedExecutor.Callback.class);
-        var executor = PartitionedExecutors.trailingThrottled(1, t -> Duration.ofSeconds(1));
+        PartitionedExecutor.Callback<PartitionedTask> callback = mock(PartitionedExecutor.Callback.class);
+        var executor = PartitionedExecutors.throttled(1, t -> Duration.ofSeconds(1));
         executor.addCallback(callback);
         executor.execute(task1);
         executor.execute(task1);
@@ -308,7 +308,7 @@ class LazyLoadingPartitionedExecutorTest {
 
         doThrow(exception).when(task1).run();
 
-        PartitionedExecutor.Callback callback = mock(PartitionedExecutor.Callback.class);
+        PartitionedExecutor.Callback<PartitionedTask> callback = mock(PartitionedExecutor.Callback.class);
 
         var executor = PartitionedExecutors.fifo(1, 1);
         executor.addCallback(callback);

@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-class TrailingThrottledPartitionQueue<T extends PartitionedTask> implements PartitionQueue<T> {
+class ThrottledPartitionQueue<T extends PartitionedTask> implements PartitionQueue<T> {
     private final Lock mapLock = new ReentrantLock();
 
     private final BlockingQueue<DelayedObject> partitionKeyQueue = new DelayQueue<>();
@@ -23,7 +23,7 @@ class TrailingThrottledPartitionQueue<T extends PartitionedTask> implements Part
 
     private final Set<Callback<T>> callbacks = ConcurrentHashMap.newKeySet();
 
-    public TrailingThrottledPartitionQueue(ThrottlingFunction throttlingFunction) {
+    public ThrottledPartitionQueue(ThrottlingFunction throttlingFunction) {
         this.throttlingFunction = Objects.requireNonNull(throttlingFunction);
     }
 
@@ -60,11 +60,6 @@ class TrailingThrottledPartitionQueue<T extends PartitionedTask> implements Part
     @Override
     public T getNextTask() throws InterruptedException {
         DelayedObject delayedPartitionKey = partitionKeyQueue.take();
-
-        if (delayedPartitionKey == null) {
-            return null;
-        }
-
         mapLock.lock();
         try {
             return taskPerPartitionKeyMap.remove(delayedPartitionKey.getObject());
