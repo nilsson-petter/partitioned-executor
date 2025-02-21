@@ -27,7 +27,7 @@ public class PartitionedExecutors {
      */
     public static <T extends PartitionedTask> PartitionedExecutor<T> fifo(int maxPartitions, int maxQueueSize) {
         return new LazyLoadingPartitionedExecutor<>(
-                Partitioners.mostSuitableFor(maxPartitions),
+                Partitioner.mostSuitableFor(maxPartitions),
                 i -> new SingleThreadedPartitionWorker<>(
                         PartitionQueue.fifo(maxQueueSize),
                         Thread.ofPlatform().name("partition-" + i).factory()
@@ -63,7 +63,7 @@ public class PartitionedExecutors {
      */
     public static <T extends PartitionedTask> PartitionedExecutor<T> throttled(int maxPartitions, ThrottlingFunction throttlingFunction) {
         return new LazyLoadingPartitionedExecutor<>(
-                Partitioners.mostSuitableFor(maxPartitions),
+                Partitioner.mostSuitableFor(maxPartitions),
                 i -> new SingleThreadedPartitionWorker<>(
                         PartitionQueue.throttled(throttlingFunction),
                         Thread.ofPlatform().name("partition-" + i).factory()
