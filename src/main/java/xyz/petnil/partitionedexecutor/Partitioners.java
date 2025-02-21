@@ -24,6 +24,12 @@ public class Partitioners {
     private Partitioners() {
     }
 
+    public static Partitioner mostSuitableFor(int maxPartitions) {
+        return PowerOfTwo.isPowerOfTwo(maxPartitions) ?
+                Partitioners.powerOfTwo(maxPartitions) :
+                Partitioners.generalPurpose(maxPartitions);
+    }
+
     /**
      * Returns a {@link Partitioner} optimized for scenarios where the number of partitions
      * is a power of two (e.g., 2, 4, 8, 16, etc.). This partitioner uses bitwise operations

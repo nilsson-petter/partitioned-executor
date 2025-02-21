@@ -26,14 +26,12 @@ public class PartitionedExecutors {
      * }</pre>
      */
     public static <T extends PartitionedTask> PartitionedExecutor<T> fifo(int maxPartitions, int maxQueueSize) {
-
-        return PartitionedExecutorBuilder.<T>newBuilder()
-                .withPartitioner(getPartitioner(maxPartitions))
-                .withPartitionCreator(i -> new SingleThreadedPartitionWorker<>(
+        return new LazyLoadingPartitionedExecutor<>(
+                Partitioners.mostSuitableFor(maxPartitions),
+                i -> new SingleThreadedPartitionWorker<>(
                         PartitionQueues.fifo(maxQueueSize),
                         Thread.ofPlatform().name("partition-" + i).factory()
-                ))
-                .build();
+        ));
     }
 
 
@@ -64,20 +62,13 @@ public class PartitionedExecutors {
      * }</pre>
      */
     public static <T extends PartitionedTask> PartitionedExecutor<T> throttled(int maxPartitions, ThrottlingFunction throttlingFunction) {
-        return PartitionedExecutorBuilder.<T>newBuilder()
-                .withPartitioner(getPartitioner(maxPartitions))
-                .withPartitionCreator(i -> new SingleThreadedPartitionWorker<>(
+        return new LazyLoadingPartitionedExecutor<>(
+                Partitioners.mostSuitableFor(maxPartitions),
+                i -> new SingleThreadedPartitionWorker<>(
                         PartitionQueues.throttled(throttlingFunction),
                         Thread.ofPlatform().name("partition-" + i).factory()
-                ))
-                .build();
-    }
-
-
-    private static Partitioner getPartitioner(int maxPartitions) {
-        return PowerOfTwo.isPowerOfTwo(maxPartitions) ?
-                Partitioners.powerOfTwo(maxPartitions) :
-                Partitioners.generalPurpose(maxPartitions);
+                )
+        );
     }
 
 }
