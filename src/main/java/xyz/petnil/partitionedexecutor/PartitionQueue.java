@@ -75,7 +75,7 @@ public interface PartitionQueue<T extends PartitionedTask> {
     /**
      * The {@code Callback} interface defines a callback to handle situations
      * where a task is dropped from the queue. This can be useful for handling cases
-     * where tasks are superseded by e.g. debouncing behaviour.
+     * where tasks are superseded by e.g. throttling behaviour.
      */
     interface Callback<T extends PartitionedTask> {
         /**

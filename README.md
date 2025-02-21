@@ -19,7 +19,7 @@ This allows for greater customization and adaptability to various concurrency re
 - **Task Partitioning**: Tasks are routed to specific partitions based on a user-defined partitioning function.
 - **Parallel Execution**: Partitions execute tasks concurrently, allowing for efficient utilization of resources.
 - **Synchronous within Partition**: Tasks can be executed synchronously in order of arrival, depending on implementation chosen.
-- **Debouncing**: Ensures that only the latest task per partition key is executed within a specified timeframe.
+- **Throttling**: Ensures that only the latest task per partition key is executed within a specified timeframe.
 - **Graceful Shutdown**: Provides mechanisms to await task completion or force shutdown and retrieve pending tasks.
 - **Callbacks**: Supports task execution callbacks.
 - **Customization**: Users can implement custom partitioning strategies, partitions and partition queues to control behaviour.
