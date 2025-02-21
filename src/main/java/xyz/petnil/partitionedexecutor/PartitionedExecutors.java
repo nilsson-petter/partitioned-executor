@@ -29,7 +29,7 @@ public class PartitionedExecutors {
         return new LazyLoadingPartitionedExecutor<>(
                 Partitioners.mostSuitableFor(maxPartitions),
                 i -> new SingleThreadedPartitionWorker<>(
-                        PartitionQueues.fifo(maxQueueSize),
+                        PartitionQueue.fifo(maxQueueSize),
                         Thread.ofPlatform().name("partition-" + i).factory()
         ));
     }
@@ -65,7 +65,7 @@ public class PartitionedExecutors {
         return new LazyLoadingPartitionedExecutor<>(
                 Partitioners.mostSuitableFor(maxPartitions),
                 i -> new SingleThreadedPartitionWorker<>(
-                        PartitionQueues.throttled(throttlingFunction),
+                        PartitionQueue.throttled(throttlingFunction),
                         Thread.ofPlatform().name("partition-" + i).factory()
                 )
         );

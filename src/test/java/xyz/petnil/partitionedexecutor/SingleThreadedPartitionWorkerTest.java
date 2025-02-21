@@ -129,7 +129,7 @@ class SingleThreadedPartitionWorkerTest {
             return start;
         };
 
-        var partitionWorker = new SingleThreadedPartitionWorker<>(PartitionQueues.fifo(Integer.MAX_VALUE), tf);
+        var partitionWorker = new SingleThreadedPartitionWorker<>(PartitionQueue.fifo(Integer.MAX_VALUE), tf);
         partitionWorker.addCallback(mockCallback);
         partitionWorker.start();
         workerThread.get().interrupt();
@@ -140,7 +140,7 @@ class SingleThreadedPartitionWorkerTest {
 
     @Test
     void interruptPolling() throws Exception {
-        var partitionWorker = new SingleThreadedPartitionWorker<>(PartitionQueues.fifo(Integer.MAX_VALUE), Thread.ofPlatform().daemon().name("test").factory());
+        var partitionWorker = new SingleThreadedPartitionWorker<>(PartitionQueue.fifo(Integer.MAX_VALUE), Thread.ofPlatform().daemon().name("test").factory());
         Partition.Callback<PartitionedTask> callback = mock(Partition.Callback.class);
         partitionWorker.addCallback(callback);
         partitionWorker.start();

@@ -85,5 +85,13 @@ public interface PartitionQueue<T extends PartitionedTask> {
          */
         void onDropped(T task);
     }
+
+    static <T extends PartitionedTask> PartitionQueue<T> fifo(int capacity) {
+        return new FifoPartitionQueue<>(capacity);
+    }
+
+    static <T extends PartitionedTask> PartitionQueue<T> throttled(ThrottlingFunction throttlingFunction) {
+        return new ThrottledPartitionQueue<>(throttlingFunction);
+    }
 }
 
