@@ -28,7 +28,7 @@ This allows for greater customization and adaptability to various concurrency re
 
 ## Requirements
 
-- **Java Version**: This library requires **Java 21** or higher to use features like Virtual Threads. Please ensure you have the appropriate version installed.
+- **Java Version**: This library requires **Java 21** or higher. Please ensure you have the appropriate version installed.
 
 ---
 
@@ -95,10 +95,10 @@ private void persistQuote(String ticker, BigDecimal lastPrice) {
 
 ### Output
 ```text
-SingleThreadedPartitionWorker-20|MSFT|209.83
-SingleThreadedPartitionWorker-20|MSFT|208.51
-SingleThreadedPartitionWorker-28|AAPL|130.3
-SingleThreadedPartitionWorker-28|AAPL|131.3
+partition-20|MSFT|209.83
+partition-20|MSFT|208.51
+partition-28|AAPL|130.3
+partition-28|AAPL|131.3
 ```
 Tasks for "AAPL" runs synchronously in partition #28. In parallel, tasks for "MSFT" runs in partition #20. 
 
