@@ -32,3 +32,4 @@ target/
 *.ear
 /compiler.xml
 /.env.sh
+/privkey.asc

@@ -6,6 +6,7 @@
     <packaging>jar</packaging>
     <version>0.0.1</version>
     <name>Partitioned Executor</name>
+    <description>Library for executing tasks in logical partitions</description>
     <url>http://maven.apache.org</url>
 
     <properties>
