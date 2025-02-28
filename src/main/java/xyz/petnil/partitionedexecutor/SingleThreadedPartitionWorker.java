@@ -32,7 +32,7 @@ class SingleThreadedPartitionWorker<T extends PartitionedTask> implements Partit
     private void pollAndProcess() {
         while (true) {
             try {
-                // Blocks until a value becomes available
+                // Make polling interval configurable
                 T nextTask = partitionQueue.getNextTask(Duration.ofSeconds(1));
 
                 if (isShutdown() && nextTask == null) {
