@@ -23,13 +23,6 @@ import java.util.Queue;
 public interface Partition<T extends PartitionedTask> extends AutoCloseable {
 
     /**
-     * Starts the execution of tasks in this partition. This typically involves starting the
-     * thread(s) that will consume and execute tasks from the partition's {@link PartitionQueue}.
-     * Has no effect on already started partition.
-     */
-    void start();
-
-    /**
      * Returns the {@link PartitionQueue} associated with this partition.
      * The queue holds tasks that are waiting to be executed.
      *
@@ -105,16 +98,34 @@ public interface Partition<T extends PartitionedTask> extends AutoCloseable {
     void removeCallback(Callback<T> callback);
 
     /**
-     * Initiates the shutdown of the partition and attempts to await task completion.
-     * If tasks are not completed within 30 minutes, it forces a shutdown and retrieves any pending tasks.
+     * Closes this partition, ensuring an orderly shutdown.
+     * <p>
+     * If the resource is not already terminated, it will be shut down
+     * and then waited upon until termination. If interrupted during
+     * the waiting process, a forced shutdown is initiated, and the
+     * thread's interrupt status is restored before returning.
+     * </p>
      *
-     * @throws Exception if an error occurs during shutdown
      */
     @Override
-    default void close() throws Exception {
-        shutdown();
-        if (!awaitTermination(Duration.ofMinutes(30))) {
-            shutdownNow();
+    default void close() {
+        boolean terminated = isTerminated();
+        if (!terminated) {
+            shutdown();
+            boolean interrupted = false;
+            while (!terminated) {
+                try {
+                    terminated = awaitTermination(Duration.ofDays(1));
+                } catch (InterruptedException e) {
+                    if (!interrupted) {
+                        shutdownNow();
+                        interrupted = true;
+                    }
+                }
+            }
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -123,12 +134,6 @@ public interface Partition<T extends PartitionedTask> extends AutoCloseable {
      * such as task success, failure, rejection, and shutdown.
      */
     interface Callback<T extends PartitionedTask> {
-
-        /**
-         * Called when the partition has been started, meaning that it has begun executing tasks.
-         */
-        default void onStarted() {
-        }
 
         /**
          * Called when {@link Partition#shutdown()} has been invoked, meaning that it will no longer
@@ -159,12 +164,6 @@ public interface Partition<T extends PartitionedTask> extends AutoCloseable {
          * @param exception the exception that occurred during execution
          */
         default void onError(T task, Exception exception) {
-        }
-
-        /**
-         * Called when the partition is interrupted during execution.
-         */
-        default void onInterrupted() {
         }
 
         /**

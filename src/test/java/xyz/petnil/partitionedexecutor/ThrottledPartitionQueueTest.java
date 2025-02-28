@@ -32,6 +32,13 @@ class ThrottledPartitionQueueTest {
     }
 
     @Test
+    void throttlingFunction() {
+        ThrottlingFunction s = o -> Duration.ofSeconds(1);
+        var queue = new ThrottledPartitionQueue<>(s);
+        assertThat(queue.getThrottlingFunction()).isEqualTo(s);
+    }
+
+    @Test
     void enqueue_shouldAddTask_whenNewPartitionKey() {
         boolean result = throttledPartitionQueue.enqueue(mockTask);
         assertThat(result).isTrue();
@@ -61,7 +68,7 @@ class ThrottledPartitionQueueTest {
                 .containsValue(secondTask)
                 .containsKey(partitionKey);
 
-        PartitionedTask firstInQueue = throttledPartitionQueue.getNextTask();
+        PartitionedTask firstInQueue = throttledPartitionQueue.getNextTask(Duration.ofSeconds(1));
         assertEquals(secondTask, firstInQueue);
 
         verify(callback, times(1)).onDropped(firstTask);
@@ -71,7 +78,7 @@ class ThrottledPartitionQueueTest {
     void getNextTask_shouldReturnTask_whenAvailable() throws InterruptedException {
         when(throttlingFunction.getThrottlingInterval(any())).thenReturn(Duration.ofMillis(20));
         throttledPartitionQueue.enqueue(mockTask);
-        PartitionedTask retrievedTask = throttledPartitionQueue.getNextTask();
+        PartitionedTask retrievedTask = throttledPartitionQueue.getNextTask(Duration.ofSeconds(1));
         assertThat(retrievedTask).isEqualTo(mockTask);
         assertThat(throttledPartitionQueue.getQueueSize()).isEqualTo(0);
     }

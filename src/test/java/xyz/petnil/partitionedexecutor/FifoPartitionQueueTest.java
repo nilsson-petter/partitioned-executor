@@ -2,18 +2,30 @@ package xyz.petnil.partitionedexecutor;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import xyz.petnil.partitionedexecutor.testdata.TestTask;
+
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static xyz.petnil.partitionedexecutor.testdata.TestTask.TEST_TASK;
 
 class FifoPartitionQueueTest {
 
-    private FifoPartitionQueue<PartitionedTask> partitionQueue;
+    private FifoPartitionQueue<TestTask> partitionQueue;
 
     @BeforeEach
     void setUp() {
         partitionQueue = new FifoPartitionQueue<>(3); // Queue with a capacity of 3
+        partitionQueue.addCallback(mock(PartitionQueue.Callback.class));
+        partitionQueue.removeCallback(mock(PartitionQueue.Callback.class));
+    }
+
+    @Test
+    void queueCapacity() {
+        assertThat(partitionQueue.getCapacity()).isEqualTo(3);
     }
 
     @Test
@@ -23,13 +35,7 @@ class FifoPartitionQueueTest {
 
     @Test
     void shouldEnqueueTaskSuccessfully() {
-        // Given
-        PartitionedTask task = createTask("key1");
-
-        // When
-        boolean result = partitionQueue.enqueue(task);
-
-        // Then
+        boolean result = partitionQueue.enqueue(TEST_TASK);
         assertThat(result).isTrue();
         assertThat(partitionQueue.getQueueSize()).isEqualTo(1);
     }
@@ -37,8 +43,10 @@ class FifoPartitionQueueTest {
     @Test
     void queueShouldContainTasks() {
         // Given
-        PartitionedTask task1 = createTask("key1");
-        PartitionedTask task2 = createTask("key1");
+        TestTask task1 = new TestTask(1, () -> {
+        });
+        TestTask task2 = new TestTask(2, () -> {
+        });
 
         // When
         partitionQueue.enqueue(task1);
@@ -51,12 +59,17 @@ class FifoPartitionQueueTest {
     @Test
     void shouldReturnFalseWhenEnqueueExceedsCapacity() {
         // Given
-        partitionQueue.enqueue(createTask("key1"));
-        partitionQueue.enqueue(createTask("key2"));
-        partitionQueue.enqueue(createTask("key3"));
+        partitionQueue.enqueue(new TestTask(1, () -> {
+        }));
+        partitionQueue.enqueue(new TestTask(2, () -> {
+        }));
+        partitionQueue.enqueue(new TestTask(3, () -> {
+        }));
+
 
         // When
-        boolean result = partitionQueue.enqueue(createTask("key4"));
+        boolean result = partitionQueue.enqueue(new TestTask(4, () -> {
+        }));
 
         // Then
         assertThat(result).isFalse(); // Queue is full, should return false
@@ -73,42 +86,27 @@ class FifoPartitionQueueTest {
     @Test
     void shouldRetrieveTask() throws InterruptedException {
         // Given
-        PartitionedTask task = createTask("key1");
-        partitionQueue.enqueue(task);
+        partitionQueue.enqueue(TEST_TASK);
 
         // When
-        PartitionedTask nextTask = partitionQueue.getNextTask();
+        TestTask nextTask = partitionQueue.getNextTask(Duration.ofMillis(1));
 
         // Then
         assertThat(nextTask).isNotNull();
-        assertThat(nextTask.getPartitionKey()).isEqualTo("key1");
+        assertThat(nextTask).isEqualTo(TEST_TASK);
         assertThat(partitionQueue.getQueueSize()).isEqualTo(0); // Queue should be empty
     }
 
     @Test
     void shouldReturnCorrectQueueSize() {
         // Given
-        partitionQueue.enqueue(createTask("key1"));
-        partitionQueue.enqueue(createTask("key2"));
+        partitionQueue.enqueue(TEST_TASK);
+        partitionQueue.enqueue(TEST_TASK);
 
         // When
         int size = partitionQueue.getQueueSize();
 
         // Then
         assertThat(size).isEqualTo(2);
-    }
-
-    private PartitionedTask createTask(String partitionKey) {
-        return new PartitionedTask() {
-            @Override
-            public Object getPartitionKey() {
-                return partitionKey;
-            }
-
-            @Override
-            public Runnable getDelegate() {
-                return () -> System.out.println("Task executed for " + partitionKey);
-            }
-        };
     }
 }

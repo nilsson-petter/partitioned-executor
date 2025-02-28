@@ -1,5 +1,6 @@
 package xyz.petnil.partitionedexecutor;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -58,11 +59,11 @@ class ThrottledPartitionQueue<T extends PartitionedTask> implements PartitionQue
     }
 
     @Override
-    public T getNextTask() throws InterruptedException {
-        DelayedObject delayedPartitionKey = partitionKeyQueue.take();
+    public T getNextTask(Duration duration) throws InterruptedException {
+        DelayedObject delayedPartitionKey = partitionKeyQueue.poll(duration.toMillis(), TimeUnit.MILLISECONDS);
         mapLock.lock();
         try {
-            return taskPerPartitionKeyMap.remove(delayedPartitionKey.getObject());
+            return delayedPartitionKey == null ? null : taskPerPartitionKeyMap.remove(delayedPartitionKey.getObject());
         } finally {
             mapLock.unlock();
         }

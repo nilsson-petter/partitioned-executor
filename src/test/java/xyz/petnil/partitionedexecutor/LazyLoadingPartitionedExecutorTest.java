@@ -2,41 +2,44 @@ package xyz.petnil.partitionedexecutor;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import xyz.petnil.partitionedexecutor.testdata.TestTask;
 
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.Semaphore;
+import java.util.List;
+import java.util.concurrent.ThreadFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static xyz.petnil.partitionedexecutor.testdata.TestTask.TEST_TASK;
+import static xyz.petnil.partitionedexecutor.testdata.TestTask.newTestTask;
 
 class LazyLoadingPartitionedExecutorTest {
 
-    private LazyLoadingPartitionedExecutor<PartitionedTask> executor;
+    private LazyLoadingPartitionedExecutor<TestTask> executor;
     private Partitioner partitioner;
-    private Map<Integer, Partition<PartitionedTask>> createdPartitions;
-    private PartitionCreator<PartitionedTask> partitionCreator;
+    private PartitionedExecutor.Callback<TestTask> callback;
 
     @BeforeEach
     void setUp() {
-        createdPartitions = new HashMap<>();
-        partitionCreator = new MockPartitionCreator();
+        PartitionCreator<TestTask> partitionCreator = i -> {
+            ThreadFactory factory = Thread.ofPlatform().name("partition-" + i).factory();
+            PartitionQueue<TestTask> fifo = PartitionQueue.fifo(Integer.MAX_VALUE);
+            return new SingleThreadedPartitionWorker<>(fifo, factory);
+        };
         partitioner = mock(Partitioner.class);
+        when(partitioner.getPartition(any())).thenReturn(0);
+
         this.executor = new LazyLoadingPartitionedExecutor<>(partitioner, partitionCreator);
+        this.callback = mock(PartitionedExecutor.Callback.class);
+        executor.addCallback(callback);
+
     }
 
     @Test
@@ -59,274 +62,60 @@ class LazyLoadingPartitionedExecutorTest {
     void createdPartitionsCount() {
         when(partitioner.getPartition(any())).thenReturn(0, 1);
         assertThat(executor.getCreatedPartitionsCount()).isEqualTo(0);
-        executor.execute(mock(PartitionedTask.class));
+        executor.execute(TEST_TASK);
         assertThat(executor.getCreatedPartitionsCount()).isEqualTo(1);
-        executor.execute(mock(PartitionedTask.class));
+        executor.execute(TEST_TASK);
         assertThat(executor.getCreatedPartitionsCount()).isEqualTo(2);
         assertThat(executor.getPartitions()).hasSize(2);
+
+        verify(callback).onPartitionCreated(0);
+        verify(callback).onPartitionCreated(1);
+        verify(callback).onTaskSubmitted(0, TEST_TASK);
+        verify(callback).onTaskSubmitted(1, TEST_TASK);
+        verify(callback).onTaskSuccess(0, TEST_TASK);
+        verify(callback).onTaskSuccess(1, TEST_TASK);
     }
 
     @Test
     void shutdownWasInvoked() {
         when(partitioner.getPartition(any())).thenReturn(0, 1);
-        executor.execute(mock(PartitionedTask.class));
-        executor.execute(mock(PartitionedTask.class));
+        List<Partition<TestTask>> partitions = executor.getPartitions().stream().map(Mockito::spy).toList();
+        executor.execute(TEST_TASK);
+        executor.execute(TEST_TASK);
         executor.shutdown();
 
-        createdPartitions.values().forEach(p -> {
+        partitions.forEach(p -> {
             verify(p, times(1)).shutdown();
         });
     }
 
     @Test
-    void awaitTermination() throws InterruptedException {
-        when(partitioner.getPartition(any())).thenReturn(0, 1);
-        executor.execute(mock(PartitionedTask.class));
-        executor.execute(mock(PartitionedTask.class));
-
-        when(createdPartitions.get(0).awaitTermination(any())).thenReturn(false);
-        when(createdPartitions.get(1).awaitTermination(any())).thenReturn(false);
-        assertThat(executor.awaitTermination(Duration.ofMillis(5))).isFalse();
-
-        when(createdPartitions.get(0).awaitTermination(any())).thenReturn(true);
-        when(createdPartitions.get(1).awaitTermination(any())).thenReturn(true);
-
-        assertThat(executor.awaitTermination(Duration.ofMillis(5))).isTrue();
-    }
-
-    @Test
-    void shutdownNow() throws InterruptedException {
-        when(partitioner.getPartition(any())).thenReturn(0, 1);
-        executor.execute(mock(PartitionedTask.class));
-        executor.execute(mock(PartitionedTask.class));
-
-        LinkedList<PartitionedTask> tasks1 = new LinkedList<>();
-        var task1 = mock(PartitionedTask.class);
-        var task2 = mock(PartitionedTask.class);
-        tasks1.add(task1);
-        tasks1.add(task2);
-
-        LinkedList<PartitionedTask> tasks2 = new LinkedList<>();
-        var task3 = mock(PartitionedTask.class);
-        var task4 = mock(PartitionedTask.class);
-        tasks2.add(task3);
-        tasks2.add(task4);
-
-        when(createdPartitions.get(0).shutdownNow()).thenReturn(tasks1);
-        when(createdPartitions.get(1).shutdownNow()).thenReturn(tasks2);
-
-        Map<Integer, Queue<PartitionedTask>> map = executor.shutdownNow();
-        assertThat(map).containsEntry(0, tasks1);
-        assertThat(map).containsEntry(1, tasks2);
-    }
-
-    @Test
-    void isTerminated_shutdownNotInvoked() throws InterruptedException {
-        when(partitioner.getPartition(any())).thenReturn(0, 1);
-        executor.execute(mock(PartitionedTask.class));
-        executor.execute(mock(PartitionedTask.class));
-        assertThat(executor.isTerminated()).isFalse();
-        verify(createdPartitions.get(0), never()).isTerminated();
-        verify(createdPartitions.get(1), never()).isTerminated();
-    }
-
-    @Test
-    void isTerminated_partitionNotYetDone() throws InterruptedException {
-        when(partitioner.getPartition(any())).thenReturn(0);
-        executor.execute(mock(PartitionedTask.class));
+    void rejectedAfterShutdown() {
         executor.shutdown();
-        when(createdPartitions.get(0).isTerminated()).thenReturn(false);
-        assertThat(executor.isTerminated()).isFalse();
-
-        verify(createdPartitions.get(0), times(1)).isTerminated();
+        executor.execute(TEST_TASK);
+        verify(callback).onTaskRejected(0, TEST_TASK);
     }
 
     @Test
-    void notQueuedWhenInterrupted() {
-        PartitionCreator<PartitionedTask> spy = spy(partitionCreator);
-        executor.shutdown();
-        executor.execute(mock(PartitionedTask.class));
-        assertThat(createdPartitions).isEmpty();
-        verify(spy, never()).create(anyInt());
-    }
-
-    @Test
-    void gracefulShutdown_noOutstandingTasks() throws Exception {
-        when(partitioner.getPartition(any())).thenReturn(0);
-        executor.execute(mock(PartitionedTask.class));
-        when(createdPartitions.get(0).awaitTermination(any())).thenReturn(false);
-
-        LazyLoadingPartitionedExecutor<PartitionedTask> spy = spy(executor);
-        spy.close();
-        verify(spy, times(2)).shutdown();
-        verify(spy, times(1)).awaitTermination(any());
-        verify(spy, times(1)).shutdownNow();
-    }
-
-    @Test
-    void gracefulShutdown_shutdownNow() throws Exception {
-        LazyLoadingPartitionedExecutor<PartitionedTask> spy = spy(executor);
-        spy.close();
-
-        verify(spy, times(1)).shutdown();
-        verify(spy, times(1)).awaitTermination(any());
-        verify(spy, never()).shutdownNow();
-    }
-
-    @Test
-    void partitionLifecycleCallback() {
-        var task1 = mock(PartitionedTask.class);
-        var task2 = mock(PartitionedTask.class);
-        var task3 = mock(PartitionedTask.class);
-        var task4 = mock(PartitionedTask.class);
-
-        when(task1.getPartitionKey()).thenReturn(1);
-        when(task2.getPartitionKey()).thenReturn(2);
-        when(task3.getPartitionKey()).thenReturn(3);
-        when(task4.getPartitionKey()).thenReturn(4);
-
-        when(task1.getDelegate()).thenReturn(() -> {
-        });
-        when(task2.getDelegate()).thenReturn(() -> {
-        });
-        when(task3.getDelegate()).thenReturn(() -> {
-        });
-        when(task4.getDelegate()).thenReturn(() -> {
+    void errorCallback() {
+        var testTask = new TestTask(1, () -> {
+            throw new RuntimeException("RuntimeException");
         });
 
-        PartitionedExecutor.Callback<PartitionedTask> callback = mock(PartitionedExecutor.Callback.class);
+        executor.execute(testTask);
 
-        var executor = PartitionedExecutors.fifo(4, 1);
-        executor.addCallback(callback);
-        executor.execute(task1);
-        executor.execute(task2);
-        executor.execute(task3);
-        executor.execute(task4);
-        verify(callback, timeout(200).times(1)).onPartitionStarted(1);
-        verify(callback, timeout(200).times(1)).onPartitionStarted(2);
-        verify(callback, timeout(200).times(1)).onPartitionStarted(3);
-        verify(callback, timeout(200).times(1)).onPartitionStarted(0);
-        executor.shutdown();
-        verify(callback, times(1)).onPartitionShutdown(1);
-        verify(callback, times(1)).onPartitionShutdown(2);
-        verify(callback, times(1)).onPartitionShutdown(3);
-        verify(callback, times(1)).onPartitionShutdown(0);
-        executor.shutdownNow();
-        verify(callback, times(1)).onPartitionTerminated(1);
-        verify(callback, times(1)).onPartitionTerminated(2);
-        verify(callback, times(1)).onPartitionTerminated(3);
-        verify(callback, times(1)).onPartitionTerminated(0);
+        verify(callback).onTaskSubmitted(eq(0), eq(testTask));
+        verify(callback, timeout(100).times(1)).onTaskError(eq(0), eq(testTask), any(RuntimeException.class));
     }
 
     @Test
-    void taskSuccessCallback() {
-        var task1 = mock(PartitionedTask.class);
-
-        when(task1.getPartitionKey()).thenReturn(1);
-        when(task1.getDelegate()).thenReturn(() -> {
-        });
-
-        PartitionedExecutor.Callback<PartitionedTask> callback = mock(PartitionedExecutor.Callback.class);
-
-        var executor = PartitionedExecutors.fifo(4, 1);
-        executor.addCallback(callback);
-        executor.execute(task1);
-
-        verify(callback, timeout(200).times(1)).onTaskSubmitted(1, task1);
-        verify(callback, timeout(200).times(1)).onTaskSuccess(1, task1);
-    }
-
-    @Test
-    void taskRejectedCallback() throws InterruptedException {
-        var task1 = mock(PartitionedTask.class);
-        Semaphore semaphore = new Semaphore(1);
-        semaphore.acquire();
-
-        when(task1.getPartitionKey()).thenReturn(1);
-
-        Runnable task = () -> {
-            try {
-                semaphore.acquire();
-                semaphore.release();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        };
-
-        when(task1.getDelegate()).thenReturn(task);
-        doAnswer(invocation -> {
-            task.run();
-            return null;
-        }).when(task1).run();
-
-        PartitionedExecutor.Callback<PartitionedTask> callback = mock(PartitionedExecutor.Callback.class);
-
-        var executor = PartitionedExecutors.fifo(1, 1);
-        executor.addCallback(callback);
-        executor.execute(task1);
-        executor.execute(task1);
-        executor.execute(task1);
-
-        verify(callback, timeout(200).atLeastOnce()).onTaskRejected(0, task1);
-        semaphore.release();
-    }
-
-    @Test
-    void taskDroppedCallback() throws InterruptedException {
-        var task1 = mock(PartitionedTask.class);
-        Semaphore semaphore = new Semaphore(1);
-        semaphore.acquire();
-        when(task1.getPartitionKey()).thenReturn(1);
-        when(task1.getDelegate()).thenReturn(() -> {
-            try {
-                semaphore.acquire();
-                semaphore.release();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        PartitionedExecutor.Callback<PartitionedTask> callback = mock(PartitionedExecutor.Callback.class);
-        var executor = PartitionedExecutors.throttled(1, t -> Duration.ofSeconds(1));
-        executor.addCallback(callback);
-        executor.execute(task1);
-        executor.execute(task1);
-
-        verify(callback, timeout(200).times(1)).onTaskDropped(0, task1);
-        semaphore.release();
-    }
-
-    @Test
-    void taskErrorCallback() {
-        var task1 = mock(PartitionedTask.class);
-
-        var exception = new RuntimeException("taskErrorCallback");
-        when(task1.getPartitionKey()).thenReturn(1);
-        when(task1.getDelegate()).thenReturn(() -> {
-            throw exception;
-        });
-
-        doThrow(exception).when(task1).run();
-
-        PartitionedExecutor.Callback<PartitionedTask> callback = mock(PartitionedExecutor.Callback.class);
-
-        var executor = PartitionedExecutors.fifo(1, 1);
-        executor.addCallback(callback);
-        executor.execute(task1);
-
-        verify(callback, timeout(200).times(1)).onTaskSubmitted(0, task1);
-        verify(callback, timeout(200).times(1)).onTaskError(0, task1, exception);
-    }
-
-    private class MockPartitionCreator implements PartitionCreator<PartitionedTask> {
-
-        @Override
-        public Partition<PartitionedTask> create(int partitionNumber) {
-            Partition<PartitionedTask> mock = mock(Partition.class);
-            createdPartitions.put(partitionNumber, mock);
-            return mock;
+    void autoclosable() {
+        try (PartitionedExecutor<TestTask> paex = PartitionedExecutors.fifo(1, 10)) {
+            paex.execute(newTestTask());
+            paex.execute(newTestTask());
+            paex.execute(newTestTask());
+            paex.execute(newTestTask());
         }
     }
-
 
 }

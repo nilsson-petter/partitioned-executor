@@ -77,13 +77,33 @@ public interface PartitionedExecutor<T extends PartitionedTask> extends AutoClos
     int getMaxPartitionsCount();
 
     /**
-     * Closes the executor, attempting a graceful shutdown first. If the executor does not
-     * terminate within a day, it invokes {@link #shutdownNow()} to force termination.
+     * Closes the executor, ensuring an orderly shutdown.
+     * <p>
+     * If the resource is not already terminated, it will be shut down
+     * and then waited upon until termination. If interrupted during
+     * the waiting process, a forced shutdown is initiated, and the
+     * thread's interrupt status is restored before returning.
+     * </p>
+     *
      */
-    default void close() throws Exception {
-        shutdown();
-        if (!awaitTermination(Duration.ofDays(1))) {
-            shutdownNow();
+    default void close() {
+        boolean terminated = isTerminated();
+        if (!terminated) {
+            shutdown();
+            boolean interrupted = false;
+            while (!terminated) {
+                try {
+                    terminated = awaitTermination(Duration.ofDays(1));
+                } catch (InterruptedException e) {
+                    if (!interrupted) {
+                        shutdownNow();
+                        interrupted = true;
+                    }
+                }
+            }
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -102,16 +122,13 @@ public interface PartitionedExecutor<T extends PartitionedTask> extends AutoClos
         default void onTerminated() {
         }
 
-        default void onPartitionStarted(int partitionNumber) {
+        default void onPartitionCreated(int partitionNumber) {
         }
 
         default void onPartitionShutdown(int partitionNumber) {
         }
 
         default void onPartitionTerminated(int partitionNumber) {
-        }
-
-        default void onPartitionInterrupted(int partitionNumber) {
         }
 
         default void onTaskSubmitted(int partitionNumber, T task) {

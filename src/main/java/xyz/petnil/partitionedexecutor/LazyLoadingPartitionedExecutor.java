@@ -14,9 +14,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * An implementation of {@link PartitionedExecutor} where partitions are created lazily
- * on-demand when a task is assigned to a new partition. This ensures that resources
- * are only allocated when necessary.
+ * An implementation of {@link PartitionedExecutor} where partitions are created lazily on-demand when a task is
+ * assigned to a new partition. This ensures that resources are only allocated when necessary.
  *
  * <p>This executor uses a {@link Partitioner} to determine the partition for
  * each task, and a {@link PartitionCreator} to instantiate partitions when required.
@@ -39,12 +38,15 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
     private final Set<Callback<T>> callbacks = ConcurrentHashMap.newKeySet();
 
     /**
-     * Creates a {@code LazyPartitionedExecutor} with the specified partitioner
-     * and partition creator.
+     * Creates a {@code LazyPartitionedExecutor} with the specified partitioner and partition creator.
      *
-     * @param partitioner      the function used to assign tasks to partitions, must not be null
-     * @param partitionCreator the factory used to create partitions when needed, must not be null
-     * @throws NullPointerException if either {@code partitioner} or {@code partitionCreator} is null
+     * @param partitioner
+     *         the function used to assign tasks to partitions, must not be null
+     * @param partitionCreator
+     *         the factory used to create partitions when needed, must not be null
+     *
+     * @throws NullPointerException
+     *         if either {@code partitioner} or {@code partitionCreator} is null
      */
     public LazyLoadingPartitionedExecutor(Partitioner partitioner,
                                           PartitionCreator<T> partitionCreator) {
@@ -54,29 +56,34 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
     }
 
     /**
-     * Executes the given {@link PartitionedTask} by determining its partition
-     * and submitting it for execution. If the corresponding partition does not exist,
-     * it is created lazily.
+     * Executes the given {@link PartitionedTask} by determining its partition and submitting it for execution. If the
+     * corresponding partition does not exist, it is created lazily.
      *
-     * @param task the partitioned task to execute, must not be null
-     * @throws NullPointerException if the task is null
+     * @param task
+     *         the partitioned task to execute, must not be null
+     *
+     * @throws NullPointerException
+     *         if the task is null
      */
     @Override
     public void execute(T task) {
         Objects.requireNonNull(task);
         mainLock.lock();
         try {
-            if (!interrupted.get()) {
-                int partitionNumber = partitioner.getPartition(task.getPartitionKey());
+            int partitionNumber = partitioner.getPartition(task.getPartitionKey());
 
+            if (!interrupted.get()) {
                 partitions.computeIfAbsent(partitionNumber, key -> {
                     Partition<T> createdPartition = partitionCreator.create(key);
+                    callbacks.forEach(c -> c.onPartitionCreated(key));
                     PartitionCallbackDecorator partitionCallbackDecorator = new PartitionCallbackDecorator(key);
                     createdPartition.addCallback(partitionCallbackDecorator);
-                    createdPartition.start();
                     return createdPartition;
                 }).submitForExecution(task);
+            } else {
+                callbacks.forEach(c -> c.onTaskRejected(partitionNumber, task));
             }
+
         } finally {
             mainLock.unlock();
         }
@@ -94,8 +101,8 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
     }
 
     /**
-     * Initiates an orderly shutdown of the executor. All tasks that have been submitted will
-     * continue to execute, but no new tasks will be accepted.
+     * Initiates an orderly shutdown of the executor. All tasks that have been submitted will continue to execute, but
+     * no new tasks will be accepted.
      */
     @Override
     public void shutdown() {
@@ -109,12 +116,15 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
     }
 
     /**
-     * Blocks until all tasks have completed execution or the timeout occurs,
-     * whichever happens first.
+     * Blocks until all tasks have completed execution or the timeout occurs, whichever happens first.
      *
-     * @param duration the maximum time to wait for termination
+     * @param duration
+     *         the maximum time to wait for termination
+     *
      * @return {@code true} if all partitions terminated, {@code false} if the timeout elapsed
-     * @throws InterruptedException if the current thread is interrupted while waiting
+     *
+     * @throws InterruptedException
+     *         if the current thread is interrupted while waiting
      */
     @Override
     public boolean awaitTermination(Duration duration) throws InterruptedException {
@@ -155,8 +165,8 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
     }
 
     /**
-     * Forces an immediate shutdown of the executor, stopping all tasks and returning the
-     * remaining unexecuted tasks in each partition.
+     * Forces an immediate shutdown of the executor, stopping all tasks and returning the remaining unexecuted tasks in
+     * each partition.
      *
      * @return a map of partition indices to the remaining tasks in each partition
      */
@@ -184,8 +194,7 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
     }
 
     /**
-     * Returns the maximum number of partitions supported by the executor,
-     * as defined by the {@link Partitioner}.
+     * Returns the maximum number of partitions supported by the executor, as defined by the {@link Partitioner}.
      *
      * @return the maximum number of partitions
      */
@@ -249,11 +258,6 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
         }
 
         @Override
-        public void onInterrupted() {
-            callbacks.forEach(c -> c.onPartitionInterrupted(partitionNumber));
-        }
-
-        @Override
         public void onRejected(T task) {
             callbacks.forEach(c -> c.onTaskRejected(partitionNumber, task));
         }
@@ -274,11 +278,6 @@ class LazyLoadingPartitionedExecutor<T extends PartitionedTask> implements Parti
             if (partitions.values().stream().allMatch(Partition::isTerminated)) {
                 callbacks.forEach(Callback::onTerminated);
             }
-        }
-
-        @Override
-        public void onStarted() {
-            callbacks.forEach(c -> c.onPartitionStarted(partitionNumber));
         }
 
         @Override
