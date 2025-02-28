@@ -1,4 +1,4 @@
-name: Java CI with Maven and SonarCloud
+name: Build and analyze
 
 on:
   push:

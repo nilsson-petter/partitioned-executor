@@ -1,4 +1,4 @@
-name: Maven Library Publish
+name: Publish to Sonatype
 
 on:
   release:
@@ -26,10 +26,10 @@ jobs:
       - name: Build with Maven
         run: mvn -B package --file pom.xml
 
-      - name: Prepare Maven environnement with Java 17 for deployment to Sonatype
+      - name: Prepare Maven environment with Java 21 for deployment to Sonatype
         run: export MAVEN_OPTS="--add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED"
 
-      - name: Publish to Apache Maven Central
+      - name: Publish to Sonatype
         run: mvn deploy -PsonatypeDeploy
         env:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
