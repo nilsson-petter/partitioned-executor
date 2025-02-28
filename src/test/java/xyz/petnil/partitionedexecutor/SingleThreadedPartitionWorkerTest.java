@@ -158,6 +158,15 @@ class SingleThreadedPartitionWorkerTest {
         verify(callback, times(1)).onShutdown();
         verify(callback, times(1)).onTerminated();
         verifyNoMoreInteractions(callback);
+    }
 
+    @Test
+    void close() {
+        TestTask testTask = newTestTask();
+        testTask.halt();
+        worker.submitForExecution(testTask);
+        new Thread(worker::close).start();
+        testTask.proceed();
+        Awaitility.await().until(worker::isTerminated);
     }
 }

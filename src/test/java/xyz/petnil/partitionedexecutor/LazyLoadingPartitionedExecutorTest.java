@@ -1,20 +1,20 @@
 package xyz.petnil.partitionedexecutor;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import xyz.petnil.partitionedexecutor.testdata.TestTask;
 
-import java.util.List;
+import java.time.Duration;
 import java.util.concurrent.ThreadFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static xyz.petnil.partitionedexecutor.testdata.TestTask.TEST_TASK;
@@ -33,13 +33,18 @@ class LazyLoadingPartitionedExecutorTest {
             PartitionQueue<TestTask> fifo = PartitionQueue.fifo(Integer.MAX_VALUE);
             return new SingleThreadedPartitionWorker<>(fifo, factory);
         };
+
         partitioner = mock(Partitioner.class);
         when(partitioner.getPartition(any())).thenReturn(0);
 
         this.executor = new LazyLoadingPartitionedExecutor<>(partitioner, partitionCreator);
         this.callback = mock(PartitionedExecutor.Callback.class);
         executor.addCallback(callback);
+    }
 
+    @AfterEach
+    void tearDown() {
+        executor.close();
     }
 
     @Test
@@ -79,14 +84,23 @@ class LazyLoadingPartitionedExecutorTest {
     @Test
     void shutdownWasInvoked() {
         when(partitioner.getPartition(any())).thenReturn(0, 1);
-        List<Partition<TestTask>> partitions = executor.getPartitions().stream().map(Mockito::spy).toList();
         executor.execute(TEST_TASK);
         executor.execute(TEST_TASK);
         executor.shutdown();
+        assertTrue(executor.isShutdown());
+        executor.getPartitions().forEach(p -> assertTrue(p.isShutdown()));
+    }
 
-        partitions.forEach(p -> {
-            verify(p, times(1)).shutdown();
-        });
+    @Test
+    void awaitTermination() throws InterruptedException {
+        when(partitioner.getPartition(any())).thenReturn(0, 1);
+        executor.execute(TEST_TASK);
+        executor.execute(TEST_TASK);
+        executor.shutdown();
+        assertTrue(executor.awaitTermination(Duration.ofSeconds(2)));
+        assertTrue(executor.isShutdown());
+        assertTrue(executor.isTerminated());
+        executor.getPartitions().forEach(p -> assertTrue(p.isTerminated()));
     }
 
     @Test
