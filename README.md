@@ -1,7 +1,7 @@
 # Partitioned Executor Library
 
 [![Maven Central](https://img.shields.io/maven-central/v/xyz.petnil/partitioned-executor.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:xyz.petnil%20a:partitioned-executor)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/nilsson-petter/partitioned-executor/ci.yml?branch=main)](https://github.com/nilsson-petter/partitioned-executor/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/nilsson-petter/partitioned-executor/ci.yaml?branch=main)](https://github.com/nilsson-petter/partitioned-executor/actions)
 [![License](https://img.shields.io/github/license/nilsson-petter/partitioned-executor)](https://opensource.org/licenses/MIT)
 
 ---
